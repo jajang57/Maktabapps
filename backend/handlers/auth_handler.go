@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"net/http"
 	"project-akuntansi-backend/models"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -13,15 +16,17 @@ import (
 var jwtSecret = []byte("your-secret-key-here") // Ganti dengan secret key yang aman
 
 type Claims struct {
-	UserID   uint   `json:"user_id"`
-	Username string `json:"username"`
+	UserID    uint   `json:"user_id"`
+	Username  string `json:"username"`
+	SessionID string `json:"session_id"` // Tambah session ID untuk validasi device
 	jwt.RegisteredClaims
 }
 
 // LoginRequest - Structure untuk request login
 type LoginRequest struct {
-	Username string `json:"username" binding:"required"`
-	Password string `json:"password" binding:"required"`
+	Username   string `json:"username" binding:"required"`
+	Password   string `json:"password" binding:"required"`
+	DeviceInfo string `json:"deviceInfo"` // Info device/browser
 }
 
 // RegisterRequest - Structure untuk request register
@@ -109,10 +114,42 @@ func Login(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 
-		// Generate JWT token
-		token, err := generateToken(user.ID, user.Username)
+		// Generate session ID untuk device tracking
+		sessionID, err := generateSessionID()
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat session"})
+			return
+		}
+
+		// Generate JWT token dengan session ID
+		token, err := generateToken(user.ID, user.Username, sessionID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal membuat token"})
+			return
+		}
+
+		// Get device info from request
+		deviceInfo := req.DeviceInfo
+		if deviceInfo == "" {
+			deviceInfo = c.GetHeader("User-Agent")
+		}
+
+		// Update user dengan token dan device info terbaru
+		now := time.Now()
+		updateData := map[string]interface{}{
+			"active_token":  token,
+			"device_info":   deviceInfo,
+			"last_login_at": &now,
+		}
+
+		if err := db.Model(&user).Updates(updateData).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update session"})
+			return
+		}
+
+		// Refresh user data
+		if err := db.First(&user, user.ID).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengambil data user"})
 			return
 		}
 
@@ -126,11 +163,44 @@ func Login(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
-// generateToken - Generate JWT token
-func generateToken(userID uint, username string) (string, error) {
+// POST /api/logout
+func Logout(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Get user ID from context (set by AuthMiddleware)
+		userID, exists := c.Get("userID")
+		if !exists {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "User tidak terautentikasi"})
+			return
+		}
+
+		// Clear active token untuk logout
+		if err := db.Model(&models.User{}).Where("id = ?", userID).Updates(map[string]interface{}{
+			"active_token": "",
+			"device_info":  "",
+		}).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal melakukan logout"})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"message": "Logout berhasil"})
+	}
+}
+
+// generateSessionID - Generate unique session ID
+func generateSessionID() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
+
+// generateToken - Generate JWT token with session ID
+func generateToken(userID uint, username string, sessionID string) (string, error) {
 	claims := Claims{
-		UserID:   userID,
-		Username: username,
+		UserID:    userID,
+		Username:  username,
+		SessionID: sessionID,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)), // Token berlaku 24 jam
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -141,7 +211,7 @@ func generateToken(userID uint, username string) (string, error) {
 	return token.SignedString(jwtSecret)
 }
 
-// AuthMiddleware - Middleware untuk melindungi route yang butuh authentication
+// AuthMiddleware - Middleware untuk melindungi route yang butuh authentication dengan single device validation
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.GetHeader("Authorization")
@@ -168,10 +238,38 @@ func AuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		// Simpan claims ke context
+		// Validasi claims dan single device login
 		if claims, ok := token.Claims.(*Claims); ok {
+			// Get database connection from context atau setup
+			db := c.MustGet("db").(*gorm.DB)
+
+			// Cek apakah token masih aktif di database
+			var user models.User
+			if err := db.First(&user, claims.UserID).Error; err != nil {
+				c.JSON(http.StatusUnauthorized, gin.H{"error": "User tidak ditemukan"})
+				c.Abort()
+				return
+			}
+
+			// Validasi apakah token yang digunakan masih sama dengan yang tersimpan (single device)
+			if strings.TrimSpace(user.ActiveToken) != strings.TrimSpace(tokenString) {
+				c.JSON(http.StatusUnauthorized, gin.H{
+					"error": "Session telah berakhir. Akun Anda sedang digunakan di device lain.",
+					"code":  "SINGLE_DEVICE_VIOLATION",
+				})
+				c.Abort()
+				return
+			}
+
+			// Simpan data user ke context
 			c.Set("userID", claims.UserID)
 			c.Set("username", claims.Username)
+			c.Set("sessionID", claims.SessionID)
+			c.Set("user", user)
+		} else {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token claims tidak valid"})
+			c.Abort()
+			return
 		}
 
 		c.Next()

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import Select from "react-select";
+import api from "../../utils/api";
 
 function getTodayLocal() {
   const now = new Date();
@@ -16,15 +17,15 @@ export default function JurnalUmum() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/coa-kas-bank")
-      .then(res => res.json())
-      .then(json => setakunKasBankList(json));
+    api.get("/coa-kas-bank")
+      .then(res => setakunKasBankList(res.data))
+      .catch(err => console.error("Error fetching COA Kas Bank:", err));
   }, []);
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/master-coa")
-      .then(res => res.json())
-      .then(json => setCoaList(json));
+    api.get("/master-coa")
+      .then(res => setCoaList(res.data))
+      .catch(err => console.error("Error fetching Master COA:", err));
   }, []);
 
   const today = getTodayLocal();
@@ -44,11 +45,8 @@ export default function JurnalUmum() {
   async function fetchNoBukti(akunKas, tanggal) {
     if (!akunKas || !tanggal) return "";
     try {
-      const res = await fetch(
-        `http://localhost:8080/api/generate-no-bukti?akunKas=${akunKas}&tanggal=${tanggal}`
-      );
-      const data = await res.json();
-      return data.noBukti || "";
+      const res = await api.get(`/generate-no-bukti?akunKas=${akunKas}&tanggal=${tanggal}`);
+      return res.data.noBukti || "";
     } catch {
       return "";
     }
@@ -248,19 +246,13 @@ export default function JurnalUmum() {
     }));
 
     // 3. Kirim ke backend hanya baris yang baru di-lock
-    fetch("http://localhost:8080/api/jurnal-detail", {
-      method: "PUT", // gunakan PUT untuk update
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(rowsToSend),
-    })
-      .then((res) => res.json())
+    api.put("/jurnal-detail", rowsToSend)
       .then((result) => {
         alert("Jurnal berhasil dikirim ke backend!");
         // Ambil ulang data dari backend agar tampilan sesuai database
-        fetch("http://localhost:8080/api/jurnal-detail")
-          .then((res) => res.json())
-          .then((data) => {
-            setRows(data.map(row => ({
+        api.get("/jurnal-detail")
+          .then((response) => {
+            setRows(response.data.map(row => ({
               ...row,
               saved: true,
               posted: true,
@@ -423,11 +415,10 @@ export default function JurnalUmum() {
   }, [rows]); // dependensi rows agar bisa akses rows terbaru
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/jurnal-detail")
-      .then((res) => res.json())
-      .then((data) => {
+    api.get("/jurnal-detail")
+      .then((response) => {
         // Jika ingin langsung tampilkan semua data dari DB:
-        setRows(data.map(row => ({
+        setRows(response.data.map(row => ({
           ...row,
           saved: true,
           posted: true,
@@ -467,16 +458,17 @@ export default function JurnalUmum() {
 
   // Fungsi untuk melakukan hapus jika Yes
   const handleDeleteByNoBukti = () => {
-    fetch("http://localhost:8080/api/jurnal-detail", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ noBukti: noBuktiToDelete }),
+    api.delete("/jurnal-detail", {
+      data: { noBukti: noBuktiToDelete }
     })
-      .then(res => res.json())
       .then(() => {
         setRows(rows.filter(row => row.noBukti !== noBuktiToDelete));
         setShowConfirm(false);
         setNoBuktiToDelete(null);
+      })
+      .catch(err => {
+        console.error("Error deleting jurnal:", err);
+        alert("Gagal menghapus data jurnal");
       });
   };
 

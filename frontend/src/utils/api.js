@@ -19,17 +19,34 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor untuk handle token expired
+// Response interceptor untuk handle token expired dan single device violation
 api.interceptors.response.use(
   (response) => {
     return response;
   },
   (error) => {
     if (error.response?.status === 401) {
-      // Token expired atau invalid
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const errorData = error.response.data;
+      
+      // Handle single device violation
+      if (errorData.code === 'SINGLE_DEVICE_VIOLATION') {
+        // Clear local storage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        
+        // Dispatch custom event for single device violation
+        window.dispatchEvent(new CustomEvent('singleDeviceViolation', {
+          detail: {
+            type: 'SINGLE_DEVICE_VIOLATION',
+            message: errorData.error
+          }
+        }));
+      } else {
+        // Token expired atau invalid biasa
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

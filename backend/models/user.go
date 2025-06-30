@@ -1,15 +1,20 @@
 package models
 
 import (
+	"time"
+
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
 type User struct {
-	ID       uint   `json:"id" gorm:"primaryKey"`
-	Username string `json:"username" gorm:"unique;not null"`
-	Password string `json:"-" gorm:"not null"` // "-" agar password tidak muncul di JSON response
-	FullName string `json:"fullName" gorm:"not null"`
+	ID          uint       `json:"id" gorm:"primaryKey"`
+	Username    string     `json:"username" gorm:"unique;not null"`
+	Password    string     `json:"-" gorm:"not null"` // "-" agar password tidak muncul di JSON response
+	FullName    string     `json:"fullName" gorm:"not null"`
+	ActiveToken string     `json:"-" gorm:"type:text"` // Token aktif untuk device yang sedang login
+	DeviceInfo  string     `json:"-" gorm:"type:text"` // Info device yang sedang login
+	LastLoginAt *time.Time `json:"lastLoginAt"`        // Waktu login terakhir
 	gorm.Model
 }
 

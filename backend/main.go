@@ -35,6 +35,12 @@ func main() {
 
 	r.Use(cors.New(config))
 
+	// Middleware untuk menambahkan database ke context
+	r.Use(func(c *gin.Context) {
+		c.Set("db", db)
+		c.Next()
+	})
+
 	// Public routes (tidak perlu authentication)
 	r.POST("/api/register", handlers.Register(db))
 	r.POST("/api/login", handlers.Login(db))
@@ -43,6 +49,7 @@ func main() {
 	api := r.Group("/api")
 	api.Use(handlers.AuthMiddleware())
 	{
+		api.POST("/logout", handlers.Logout(db))
 		api.GET("/jurnal", handlers.GetJurnal(db))
 		api.POST("/jurnal", handlers.PostJurnal(db))
 		api.POST("/jurnal-detail", handlers.PostJurnalDetail(db))

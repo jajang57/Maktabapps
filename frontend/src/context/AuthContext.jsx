@@ -17,14 +17,34 @@ export const AuthProvider = ({ children }) => {
 
   useEffect(() => {
     // Check if user is logged in on app start
-    const savedToken = localStorage.getItem("token");
-    const savedUser = localStorage.getItem("user");
+    const checkAuth = () => {
+      const savedToken = localStorage.getItem("token");
+      const savedUser = localStorage.getItem("user");
 
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
-    setLoading(false);
+      if (savedToken && savedUser) {
+        try {
+          // Parse user data
+          const userData = JSON.parse(savedUser);
+          
+          // Basic validation - check if token exists and user data is valid
+          if (savedToken.trim() && userData && userData.id) {
+            setToken(savedToken);
+            setUser(userData);
+          } else {
+            // Invalid data, clear storage
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+          }
+        } catch (error) {
+          // Invalid JSON, clear storage
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+        }
+      }
+      setLoading(false);
+    };
+
+    checkAuth();
   }, []);
 
   const login = (userData, authToken) => {
@@ -34,15 +54,35 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem("user", JSON.stringify(userData));
   };
 
-  const logout = () => {
-    setUser(null);
-    setToken(null);
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const logout = async () => {
+    try {
+      // Call logout API to clear server-side session
+      const token = localStorage.getItem("token");
+      if (token) {
+        await fetch("http://localhost:8080/api/logout", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        });
+      }
+    } catch (error) {
+      console.error("Logout API error:", error);
+    } finally {
+      // Clear client-side session regardless of API response
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      // Force redirect to login page
+      window.location.href = "/login";
+    }
   };
 
   const isAuthenticated = () => {
-    return !!token && !!user;
+    // Check if token and user exist and are valid
+    return !!(token && token.trim() && user && user.id);
   };
 
   const value = {

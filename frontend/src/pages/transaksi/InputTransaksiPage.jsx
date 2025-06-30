@@ -19,11 +19,13 @@ export default function InputTransaksiPage() {
   const handleRowDoubleClick = useCallback((transaksi) => {
     console.log("InputTransaksiPage - handleRowDoubleClick called with:", transaksi);
     console.log("InputTransaksiPage - formRef.current:", formRef.current);
+    
     if (formRef.current && formRef.current.handleEdit) {
       console.log("InputTransaksiPage - Calling formRef.current.handleEdit");
       formRef.current.handleEdit(transaksi);
     } else {
       console.error("InputTransaksiPage - formRef.current.handleEdit is not available");
+      console.error("InputTransaksiPage - formRef.current available methods:", formRef.current ? Object.keys(formRef.current) : "No ref");
     }
   }, []);
 

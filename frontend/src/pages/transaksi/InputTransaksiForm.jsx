@@ -33,6 +33,8 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
   // Fungsi untuk handle double click row (untuk edit)
   const handleRowDoubleClick = useCallback((transaksi) => {
     console.log("handleRowDoubleClick called with:", transaksi);
+    console.log("Available COA List:", coaList);
+    
     setIsEditMode(true);
     setSelectedTransaksiId(transaksi.id);
     
@@ -41,9 +43,26 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
       new Date(transaksi.tanggal).toISOString().split('T')[0] : 
       getTodayLocal();
     
-    setForm({
+    // Cari COA berdasarkan kode atau ID
+    let coaAkunBankValue = transaksi.coaAkunBank || "";
+    
+    // Jika coaAkunBank adalah kode, cari ID-nya
+    const coaByKode = coaList.find(coa => coa.kode === transaksi.coaAkunBank);
+    const coaById = coaList.find(coa => String(coa.id) === String(transaksi.coaAkunBank));
+    
+    if (coaByKode) {
+      coaAkunBankValue = String(coaByKode.id);
+      console.log("Found COA by kode:", coaByKode);
+    } else if (coaById) {
+      coaAkunBankValue = String(coaById.id);
+      console.log("Found COA by ID:", coaById);
+    }
+    
+    console.log("Setting coaAkunBank to:", coaAkunBankValue);
+    
+    const newFormData = {
       noTransaksi: transaksi.noTransaksi || "",
-      coaAkunBank: transaksi.coaAkunBank || "",
+      coaAkunBank: coaAkunBankValue,
       tanggal: tanggalFormatted,
       akunTransaksi: transaksi.akunTransaksi || "",
       deskripsi: transaksi.deskripsi || "",
@@ -51,8 +70,16 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
       projectName: transaksi.projectName || "",
       debit: transaksi.debit || "",
       kredit: transaksi.kredit || ""
-    });
-  }, []);
+    };
+    
+    console.log("Setting form data:", newFormData);
+    setForm(newFormData);
+    
+    // Trigger COA change untuk parent component
+    if (onCOAChange && coaAkunBankValue) {
+      onCOAChange(coaAkunBankValue);
+    }
+  }, [coaList, onCOAChange]);
 
   // Fungsi untuk reset form (Cancel)
   const handleResetForm = useCallback(() => {
@@ -100,6 +127,16 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
         setAkunTransaksiOptions([]);
       });
   }, []);
+
+  // Debug: Log form changes
+  useEffect(() => {
+    console.log("Form state changed:", form);
+  }, [form]);
+
+  // Debug: Log COA list changes
+  useEffect(() => {
+    console.log("COA List updated:", coaList);
+  }, [coaList]);
 
   // Fungsi untuk generate nomor transaksi otomatis
   const generateNoTransaksi = async () => {
@@ -376,10 +413,16 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               <option value="">Pilih COA Akun Bank</option>
               {coaList.map(coa => (
                 <option key={coa.id} value={coa.id}>
-                  {coa.nama}
+                  {coa.kode} - {coa.nama}
                 </option>
               ))}
             </select>
+            {/* Debug info */}
+            {/* {isEditMode && (
+              <small className="text-gray-500 text-xs">
+                Debug: Selected COA ID = {form.coaAkunBank}
+              </small>
+            )} */}
           </div>
           <div>
             <label className="block mb-1 font-medium">Nomor Transaksi</label>
