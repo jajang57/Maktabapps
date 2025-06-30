@@ -1,12 +1,70 @@
 package handlers
 
 import (
+	"fmt"
 	"net/http"
 	"project-akuntansi-backend/models"
+	"strconv"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 )
+
+// GET generate nomor transaksi otomatis
+func GetGenerateNoTransaksi(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		// Ambil parameter dari query string
+		kodeBankStr := c.Query("kodeBank")
+		userIDStr := c.Query("userID")
+		tanggalStr := c.Query("tanggal") // format YYYY-MM-DD
+
+		if kodeBankStr == "" || userIDStr == "" || tanggalStr == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Parameter kodeBank, userID, dan tanggal diperlukan"})
+			return
+		}
+
+		// Parse tanggal
+		tanggal, err := time.Parse("2006-01-02", tanggalStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Format tanggal tidak valid (YYYY-MM-DD)"})
+			return
+		}
+
+		// Format tanggal ke ddmmyy
+		ddmmyy := tanggal.Format("020106")
+
+		// Parse userID
+		userID, err := strconv.Atoi(userIDStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "UserID harus berupa angka"})
+			return
+		}
+
+		// Format userID menjadi 2 digit dengan leading zero
+		userIDFormatted := fmt.Sprintf("%02d", userID)
+		// Cari nomor urut terakhir untuk hari ini, user ini, dan bank ini
+		var count int64
+		pattern := fmt.Sprintf("%s/%s/%s-%%", kodeBankStr, ddmmyy, userIDFormatted)
+
+		// Hitung transaksi yang sudah ada dengan pattern yang sama
+		if err := db.Model(&models.InputTransaksi{}).
+			Where("no_transaksi LIKE ?", pattern).
+			Count(&count).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		// Nomor urut berikutnya
+		nomorUrut := count + 1
+		nomorUrutFormatted := fmt.Sprintf("%04d", nomorUrut)
+
+		// Generate nomor transaksi final
+		noTransaksi := fmt.Sprintf("%s/%s/%s-%s", kodeBankStr, ddmmyy, userIDFormatted, nomorUrutFormatted)
+
+		c.JSON(http.StatusOK, gin.H{"noTransaksi": noTransaksi})
+	}
+}
 
 // GET all input transaksi
 func GetInputTransaksi(db *gorm.DB) gin.HandlerFunc {

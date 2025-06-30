@@ -66,6 +66,7 @@ func UpdateMasterCOA(db *gorm.DB) gin.HandlerFunc {
 		coa.Kode = input.Kode
 		coa.Nama = input.Nama
 		coa.MasterCategoryCOAID = input.MasterCategoryCOAID
+		coa.SaldoAwal = input.SaldoAwal
 		if err := db.Save(&coa).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return

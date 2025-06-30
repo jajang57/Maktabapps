@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import api from "../../utils/api";
 
 export default function MasterCOA() {
   const [form, setForm] = useState({ kode: "", nama: "", masterCategoryCOAId: "", saldoAwal: "" });
@@ -18,20 +19,18 @@ export default function MasterCOA() {
 
   // Ambil data master COA
   useEffect(() => {
-    fetch("http://localhost:8080/api/master-coa")
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
-        setFilteredData(json);
+    api.get("/master-coa")
+      .then((res) => {
+        setData(res.data);
+        setFilteredData(res.data);
       })
       .catch(() => setError("Gagal mengambil data Master COA dari server"));
   }, []);
 
   // Ambil data kategori dari master category coa
   useEffect(() => {
-    fetch("http://localhost:8080/api/master-category-coa")
-      .then((res) => res.json())
-      .then((json) => setKategoriList(json))
+    api.get("/master-category-coa")
+      .then((res) => setKategoriList(res.data))
       .catch(() => setError("Gagal mengambil data kategori COA"));
   }, []);
 
@@ -49,6 +48,8 @@ export default function MasterCOA() {
       saldoAwal: form.saldoAwal ? parseFloat(form.saldoAwal) : 0,
     };
 
+    console.log("Payload yang dikirim:", payload); // Debug log
+
     // Cek duplikat kode (kecuali saat edit)
     const isDuplicate = data.some(
       (coa) => coa.kode === form.kode && coa.id !== editId
@@ -60,19 +61,13 @@ export default function MasterCOA() {
 
     if (editId) {
       // Edit mode
-      fetch(`http://localhost:8080/api/master-coa/${editId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-        .then((res) => res.json())
+      api.put(`/master-coa/${editId}`, payload)
         .then(() => {
-          fetch("http://localhost:8080/api/master-coa")
-            .then((res) => res.json())
-            .then((json) => {
-              setData(json);
-              setFilteredData(json);
-              setForm({ kode: "", nama: "", masterCategoryCOAId: "" });
+          api.get("/master-coa")
+            .then((res) => {
+              setData(res.data);
+              setFilteredData(res.data);
+              setForm({ kode: "", nama: "", masterCategoryCOAId: "", saldoAwal: "" });
               setEditId(null);
               setError("");
             });
@@ -80,19 +75,13 @@ export default function MasterCOA() {
         .catch(() => setError("Gagal update ke server"));
     } else {
       // Insert mode
-      fetch("http://localhost:8080/api/master-coa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      })
-        .then((res) => res.json())
+      api.post("/master-coa", payload)
         .then(() => {
-          fetch("http://localhost:8080/api/master-coa")
-            .then((res) => res.json())
-            .then((json) => {
-              setData(json);
-              setFilteredData(json);
-              setForm({ kode: "", nama: "", masterCategoryCOAId: "" });
+          api.get("/master-coa")
+            .then((res) => {
+              setData(res.data);
+              setFilteredData(res.data);
+              setForm({ kode: "", nama: "", masterCategoryCOAId: "", saldoAwal: "" });
               setError("");
             });
         })
@@ -102,10 +91,7 @@ export default function MasterCOA() {
 
   const handleDelete = (row) => {
     if (window.confirm(`Apakah yakin ingin menghapus COA "${row.kode} - ${row.nama}"?`)) {
-      fetch(`http://localhost:8080/api/master-coa/${row.id}`, {
-        method: "DELETE",
-      })
-        .then((res) => res.json())
+      api.delete(`/master-coa/${row.id}`)
         .then(() => {
           const newData = data.filter((d) => d.id !== row.id);
           setData(newData);
@@ -122,7 +108,7 @@ export default function MasterCOA() {
       kode: row.kode,
       nama: row.nama,
       masterCategoryCOAId: row.masterCategoryCOAId?.toString() || "",
-      saldoAwal: row.saldoAwal ?? "",
+      saldoAwal: row.saldoAwal?.toString() || "",
     });
     setEditId(row.id);
   };

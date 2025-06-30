@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import DataTable from "react-data-table-component";
+import api from "../../utils/api";
 
 export default function MasterCategoryCOA() {
   const [form, setForm] = useState({ nama: "", tipeAkun: "", isKasBank: false });
@@ -11,11 +12,10 @@ export default function MasterCategoryCOA() {
   const tableRef = useRef();
 
   useEffect(() => {
-    fetch("http://localhost:8080/api/master-category-coa")
-      .then((res) => res.json())
-      .then((json) => {
-        setData(json);
-        setFilteredData(json);
+    api.get("/master-category-coa")
+      .then((res) => {
+        setData(res.data);
+        setFilteredData(res.data);
       })
       .catch(() => setError("Gagal mengambil data Master Category COA"));
   }, []);
@@ -48,14 +48,9 @@ export default function MasterCategoryCOA() {
 
     if (editId) {
       // Edit mode
-      fetch(`http://localhost:8080/api/master-category-coa/${editId}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      })
-        .then((res) => res.json())
-        .then((updatedCat) => {
-          const newData = data.map((d) => (d.id === editId ? updatedCat : d));
+      api.put(`/master-category-coa/${editId}`, form)
+        .then((res) => {
+          const newData = data.map((d) => (d.id === editId ? res.data : d));
           setData(newData);
           setFilteredData(newData);
           setForm({ nama: "", tipeAkun: "", isKasBank: false });
@@ -66,14 +61,9 @@ export default function MasterCategoryCOA() {
         .catch(() => setError("Gagal update ke server"));
     } else {
       // Insert mode
-      fetch("http://localhost:8080/api/master-category-coa", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
-      })
-        .then((res) => res.json())
-        .then((newCat) => {
-          const newData = [...data, newCat];
+      api.post("/master-category-coa", form)
+        .then((res) => {
+          const newData = [...data, res.data];
           setData(newData);
           setFilteredData(newData);
           setForm({ nama: "", tipeAkun: "", isKasBank: false });
@@ -85,10 +75,7 @@ export default function MasterCategoryCOA() {
 
   const handleDelete = (row) => {
     if (window.confirm(`Apakah yakin ingin menghapus kategori "${row.nama}"?`)) {
-      fetch(`http://localhost:8080/api/master-category-coa/${row.id}`, {
-        method: "DELETE",
-      })
-        .then((res) => res.json())
+      api.delete(`/master-category-coa/${row.id}`)
         .then(() => {
           const newData = data.filter((d) => d.id !== row.id);
           setData(newData);

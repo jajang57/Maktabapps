@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Nomor Transaksi</title>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <h1>Test Generate Nomor Transaksi</h1>
+    
+    <div>
+        <h3>Login Test</h3>
+        <input id="username" placeholder="Username" value="admin">
+        <input id="password" type="password" placeholder="Password" value="admin123">
+        <button onclick="login()">Login</button>
+        <div id="loginResult"></div>
+    </div>        <div>
+            <h3>Generate Nomor Transaksi</h3>
+            <input id="kodeBank" placeholder="Kode Bank" value="1002">
+            <input id="tanggal" type="date" value="2025-06-30">
+            <button onclick="generateNoTransaksi()">Generate</button>
+            <div id="generateResult"></div>
+        </div>
+
+    <script>
+        let token = '';
+        let userId = '';
+
+        // Setup axios base config
+        axios.defaults.baseURL = 'http://localhost:8080/api';
+        
+        async function login() {
+            try {
+                const username = document.getElementById('username').value;
+                const password = document.getElementById('password').value;
+                
+                const response = await axios.post('/login', {
+                    username: username,
+                    password: password
+                });
+                
+                token = response.data.token;
+                userId = response.data.user.id;
+                
+                // Set default authorization header
+                axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+                
+                document.getElementById('loginResult').innerHTML = 
+                    `<p style="color: green;">Login berhasil! User ID: ${userId}</p>`;
+                    
+            } catch (error) {
+                document.getElementById('loginResult').innerHTML = 
+                    `<p style="color: red;">Login gagal: ${error.response?.data?.error || error.message}</p>`;
+            }
+        }
+
+        async function generateNoTransaksi() {
+            if (!token) {
+                alert('Please login first!');
+                return;
+            }
+
+            try {
+                const kodeBank = document.getElementById('kodeBank').value;
+                const tanggal = document.getElementById('tanggal').value;
+                
+                const response = await axios.get('/generate-no-transaksi', {
+                    params: {
+                        kodeBank: kodeBank,
+                        userID: userId,
+                        tanggal: tanggal
+                    }
+                });
+                
+                document.getElementById('generateResult').innerHTML = 
+                    `<p style="color: green;">Nomor Transaksi: <strong>${response.data.noTransaksi}</strong></p>`;
+                    
+            } catch (error) {
+                document.getElementById('generateResult').innerHTML = 
+                    `<p style="color: red;">Generate gagal: ${error.response?.data?.error || error.message}</p>`;
+            }
+        }
+    </script>
+</body>
+</html>
