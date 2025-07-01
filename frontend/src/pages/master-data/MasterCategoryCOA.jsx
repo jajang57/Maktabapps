@@ -3,7 +3,7 @@ import DataTable from "react-data-table-component";
 import api from "../../utils/api";
 
 export default function MasterCategoryCOA() {
-  const [form, setForm] = useState({ nama: "", tipeAkun: "", isKasBank: false });
+  const [form, setForm] = useState({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
   const [data, setData] = useState([]);
   const [error, setError] = useState("");
   const [filterText, setFilterText] = useState("");
@@ -30,19 +30,18 @@ export default function MasterCategoryCOA() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.nama || !form.tipeAkun) {
+    if (!form.kode || !form.nama || !form.tipeAkun) {
       setError("Semua field wajib diisi!");
       return;
     }
     // Cek duplikat (kecuali jika sedang edit data yang sama)
     const isDuplicate = data.some(
       (cat) =>
-        cat.nama === form.nama &&
-        cat.tipeAkun === form.tipeAkun &&
+        (cat.kode === form.kode || (cat.nama === form.nama && cat.tipeAkun === form.tipeAkun)) &&
         cat.id !== editId
     );
     if (isDuplicate) {
-      window.alert(`Kategori "${form.nama}" dengan tipe "${form.tipeAkun}" sudah ada!`);
+      window.alert(`Kategori "${form.nama}" dengan kode "${form.kode}" atau kombinasi nama dan tipe sudah ada!`);
       return;
     }
 
@@ -53,12 +52,15 @@ export default function MasterCategoryCOA() {
           const newData = data.map((d) => (d.id === editId ? res.data : d));
           setData(newData);
           setFilteredData(newData);
-          setForm({ nama: "", tipeAkun: "", isKasBank: false });
+          setForm({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
           setEditId(null);
           setError("");
           window.alert("Data berhasil diupdate!");
         })
-        .catch(() => setError("Gagal update ke server"));
+        .catch((err) => {
+          const errorMsg = err.response?.data?.error || "Gagal update ke server";
+          setError(errorMsg);
+        });
     } else {
       // Insert mode
       api.post("/master-category-coa", form)
@@ -66,10 +68,13 @@ export default function MasterCategoryCOA() {
           const newData = [...data, res.data];
           setData(newData);
           setFilteredData(newData);
-          setForm({ nama: "", tipeAkun: "", isKasBank: false });
+          setForm({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
           setError("");
         })
-        .catch(() => setError("Gagal simpan ke server"));
+        .catch((err) => {
+          const errorMsg = err.response?.data?.error || "Gagal simpan ke server";
+          setError(errorMsg);
+        });
     }
   };
 
@@ -82,7 +87,10 @@ export default function MasterCategoryCOA() {
           setFilteredData(newData);
           window.alert("Data berhasil dihapus!");
         })
-        .catch(() => window.alert("Gagal menghapus data!"));
+        .catch((err) => {
+          const errorMsg = err.response?.data?.error || "Gagal menghapus data!";
+          window.alert(errorMsg);
+        });
     }
   };
 
@@ -92,6 +100,7 @@ export default function MasterCategoryCOA() {
     setFilteredData(
       data.filter(
         (row) =>
+          row.kode.toLowerCase().includes(val) ||
           row.nama.toLowerCase().includes(val) ||
           row.tipeAkun.toLowerCase().includes(val)
       )
@@ -100,6 +109,7 @@ export default function MasterCategoryCOA() {
 
   const handleEdit = (row) => {
     setForm({
+      kode: row.kode,
       nama: row.nama,
       tipeAkun: row.tipeAkun,
       isKasBank: !!row.isKasBank,
@@ -108,6 +118,7 @@ export default function MasterCategoryCOA() {
   };
 
   const columns = [
+    { name: "Kode", selector: (row) => row.kode, sortable: true, width: "100px" },
     { name: "Kategori COA", selector: (row) => row.nama, sortable: true },
     { name: "Tipe Akun", selector: (row) => row.tipeAkun, sortable: true },
     {
@@ -135,8 +146,6 @@ export default function MasterCategoryCOA() {
         </div>
       ),
       ignoreRowClick: true,
-      allowOverflow: true,
-      button: true,
     },
   ];
 
@@ -149,6 +158,20 @@ export default function MasterCategoryCOA() {
           className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md border"
         >
           <div className="space-y-4">
+            <div>
+              <label className="block mb-1 font-semibold text-gray-700">
+                Kode Kategori
+              </label>
+              <input
+                type="text"
+                name="kode"
+                value={form.kode}
+                onChange={handleChange}
+                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                placeholder="Contoh: KB001"
+                required
+              />
+            </div>
             <div>
               <label className="block mb-1 font-semibold text-gray-700">
                 Nama Kategori
@@ -188,11 +211,14 @@ export default function MasterCategoryCOA() {
                 required
               >
                 <option value="">Pilih Tipe Akun</option>
-                <option value="Asset">Asset</option>
-                <option value="Kewajiban">Kewajiban</option>
-                <option value="Modal">Modal</option>
-                <option value="Pendapatan">Pendapatan</option>
-                <option value="Beban">Beban</option>
+                <option value="Asset">Asset</option> {/* 1 */}
+                <option value="Kewajiban">Kewajiban</option> {/* 2 */}
+                <option value="Modal">Modal</option> {/* 3 */}
+                <option value="Pendapatan">Pendapatan</option> {/* 4 */}
+                <option value="Harga Pokok Penjualan">Harga Pokok Penjualan</option> {/* 5 */}
+                <option value="Beban">Beban</option> {/* 6 */}
+                <option value="Pendapatan Lainnya">Pendapatan Lainnya</option> {/* 7 */}
+                <option value="Beban Lainnya">Beban Lainnya</option> {/* 8 */}
               </select>
             </div>
             {error && <div className="text-red-500 text-sm">{error}</div>}
@@ -207,7 +233,7 @@ export default function MasterCategoryCOA() {
                 type="button"
                 className="w-full bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-500 transition mt-2"
                 onClick={() => {
-                  setForm({ nama: "", tipeAkun: "", isKasBank: false });
+                  setForm({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
                   setEditId(null);
                   setError("");
                 }}
@@ -221,7 +247,7 @@ export default function MasterCategoryCOA() {
           <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
             <input
               type="text"
-              placeholder="Cari kategori/tipe akun..."
+              placeholder="Cari kode/kategori/tipe akun..."
               className="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
               value={filterText}
               onChange={handleFilter}

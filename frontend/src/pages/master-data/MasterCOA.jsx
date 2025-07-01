@@ -16,6 +16,43 @@ export default function MasterCOA() {
   const [filterKode, setFilterKode] = useState("");
   const [filterNama, setFilterNama] = useState("");
   const [filterKategori, setFilterKategori] = useState("");
+  
+  // State untuk format angka saldo awal
+  const [formattedSaldoAwal, setFormattedSaldoAwal] = useState("");
+
+  // Fungsi untuk format angka dengan 2 desimal tanpa rounding
+  const formatNumber = (value) => {
+    if (!value || value === '') return '';
+    
+    // Hapus semua karakter non-digit dan titik desimal
+    let cleanValue = value.toString().replace(/[^\d.]/g, '');
+    
+    // Pastikan hanya ada satu titik desimal
+    const parts = cleanValue.split('.');
+    if (parts.length > 2) {
+      cleanValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Convert ke number
+    const numericValue = parseFloat(cleanValue) || 0;
+    
+    // Format dengan pemisah ribuan (koma) dan desimal (titik) - format internasional
+    // Tanpa rounding, langsung format apa adanya
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    }).format(numericValue);
+  };
+
+  // Fungsi untuk unformat angka (hapus format untuk simpan ke database)
+  const unformatNumber = (value) => {
+    if (!value) return '';
+    // Untuk format internasional: 1,234,567.89
+    // Hapus semua koma (pemisah ribuan) dan biarkan titik (desimal)
+    const cleaned = value.toString()
+      .replace(/,/g, '');  // Hapus koma pemisah ribuan
+    return cleaned;
+  };
 
   // Ambil data master COA
   useEffect(() => {
@@ -30,7 +67,11 @@ export default function MasterCOA() {
   // Ambil data kategori dari master category coa
   useEffect(() => {
     api.get("/master-category-coa")
-      .then((res) => setKategoriList(res.data))
+      .then((res) => {
+        // Sort kategori berdasarkan kode ascending
+        const sortedKategori = res.data.sort((a, b) => a.kode.localeCompare(b.kode));
+        setKategoriList(sortedKategori);
+      })
       .catch(() => setError("Gagal mengambil data kategori COA"));
   }, []);
 
@@ -45,7 +86,7 @@ export default function MasterCOA() {
     const payload = {
       ...form,
       masterCategoryCOAId: Number(form.masterCategoryCOAId),
-      saldoAwal: form.saldoAwal ? parseFloat(form.saldoAwal) : 0,
+      saldoAwal: form.saldoAwal ? parseFloat(unformatNumber(form.saldoAwal)) : 0,
     };
 
     console.log("Payload yang dikirim:", payload); // Debug log
@@ -68,11 +109,15 @@ export default function MasterCOA() {
               setData(res.data);
               setFilteredData(res.data);
               setForm({ kode: "", nama: "", masterCategoryCOAId: "", saldoAwal: "" });
+              setFormattedSaldoAwal("");
               setEditId(null);
               setError("");
             });
         })
-        .catch(() => setError("Gagal update ke server"));
+        .catch((err) => {
+          const errorMsg = err.response?.data?.error || "Gagal update ke server";
+          setError(errorMsg);
+        });
     } else {
       // Insert mode
       api.post("/master-coa", payload)
@@ -82,10 +127,14 @@ export default function MasterCOA() {
               setData(res.data);
               setFilteredData(res.data);
               setForm({ kode: "", nama: "", masterCategoryCOAId: "", saldoAwal: "" });
+              setFormattedSaldoAwal("");
               setError("");
             });
         })
-        .catch(() => setError("Gagal simpan ke server"));
+        .catch((err) => {
+          const errorMsg = err.response?.data?.error || "Gagal simpan ke server";
+          setError(errorMsg);
+        });
     }
   };
 
@@ -98,7 +147,10 @@ export default function MasterCOA() {
           setFilteredData(newData);
           window.alert("Data berhasil dihapus!");
         })
-        .catch(() => window.alert("Gagal menghapus data!"));
+        .catch((err) => {
+          const errorMsg = err.response?.data?.error || "Gagal menghapus data!";
+          window.alert(errorMsg);
+        });
     }
     // Jika pilih No, tidak terjadi apa-apa
   };
@@ -110,6 +162,7 @@ export default function MasterCOA() {
       masterCategoryCOAId: row.masterCategoryCOAId?.toString() || "",
       saldoAwal: row.saldoAwal?.toString() || "",
     });
+    setFormattedSaldoAwal(row.saldoAwal ? formatNumber(row.saldoAwal) : "");
     setEditId(row.id);
   };
 
@@ -123,7 +176,7 @@ export default function MasterCOA() {
           d.nama.toLowerCase().includes(val) ||
           (
             d.masterCategoryCOA
-              ? `${d.masterCategoryCOA.nama} ${d.masterCategoryCOA.tipeAkun}`.toLowerCase()
+              ? `${d.masterCategoryCOA.kode} - ${d.masterCategoryCOA.nama} ${d.masterCategoryCOA.tipeAkun}`.toLowerCase()
               : ""
           ).includes(val)
       )
@@ -141,10 +194,42 @@ export default function MasterCOA() {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    
+    // Khusus untuk saldo awal
+    if (name === "saldoAwal") {
+      setFormattedSaldoAwal(value);
+      setForm(prev => ({ ...prev, [name]: unformatNumber(value) }));
+    } 
+    // Khusus untuk kategori COA - generate kode otomatis
+    else if (name === "masterCategoryCOAId") {
+      setForm(prev => ({ ...prev, [name]: value }));
+      
+      // Generate kode otomatis jika bukan mode edit
+      if (!editId && value) {
+        const generatedKode = generateKodeCOA(value);
+        setForm(prev => ({ ...prev, kode: generatedKode }));
+      }
+    }
+    // Field lainnya
+    else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  // Fungsi untuk format angka saat blur (kehilangan focus)
+  const handleSaldoAwalBlur = () => {
+    if (formattedSaldoAwal) {
+      const formatted = formatNumber(formattedSaldoAwal);
+      setFormattedSaldoAwal(formatted);
+    }
+  };
+
+  // Fungsi untuk kosongkan/reset form
+  const handleResetForm = () => {
+    setForm({ kode: "", nama: "", masterCategoryCOAId: "", saldoAwal: "" });
+    setFormattedSaldoAwal("");
+    setEditId(null);
+    setError("");
   };
 
   // Filter data berdasarkan filter kolom
@@ -153,7 +238,7 @@ export default function MasterCOA() {
     d.nama.toLowerCase().includes(filterNama.toLowerCase()) &&
     (
       d.masterCategoryCOA
-        ? `${d.masterCategoryCOA.nama} ${d.masterCategoryCOA.tipeAkun}`.toLowerCase()
+        ? `${d.masterCategoryCOA.kode} - ${d.masterCategoryCOA.nama} ${d.masterCategoryCOA.tipeAkun}`.toLowerCase()
         : ""
     ).includes(filterKategori.toLowerCase()) &&
     (
@@ -162,7 +247,7 @@ export default function MasterCOA() {
       d.nama.toLowerCase().includes(filterText) ||
       (
         d.masterCategoryCOA
-          ? `${d.masterCategoryCOA.nama} ${d.masterCategoryCOA.tipeAkun}`.toLowerCase()
+          ? `${d.masterCategoryCOA.kode} - ${d.masterCategoryCOA.nama} ${d.masterCategoryCOA.tipeAkun}`.toLowerCase()
           : ""
       ).includes(filterText)
     )
@@ -172,16 +257,32 @@ export default function MasterCOA() {
   const groupedData = filtered.reduce((acc, coa) => {
     const kategori =
       coa.masterCategoryCOA
-        ? `${coa.masterCategoryCOA.nama} (${coa.masterCategoryCOA.tipeAkun})`
+        ? `${coa.masterCategoryCOA.kode} - ${coa.masterCategoryCOA.nama} (${coa.masterCategoryCOA.tipeAkun})`
         : "Tanpa Kategori";
     if (!acc[kategori]) acc[kategori] = [];
     acc[kategori].push(coa);
     return acc;
   }, {});
 
+  // Sort the groups by kategori kode, then sort items within each group by kode akun
+  const sortedGroupedData = {};
+  Object.keys(groupedData)
+    .sort((a, b) => {
+      // Extract kode from kategori string for sorting
+      const kodeA = a.includes(' - ') ? a.split(' - ')[0] : 'ZZZ'; // Tanpa kategori goes last
+      const kodeB = b.includes(' - ') ? b.split(' - ')[0] : 'ZZZ';
+      return kodeA.localeCompare(kodeB);
+    })
+    .forEach(kategori => {
+      // Sort items within each category by kode akun
+      sortedGroupedData[kategori] = groupedData[kategori].sort((a, b) => 
+        a.kode.localeCompare(b.kode)
+      );
+    });
+
   // Flatten grouped data with header rows
   const flatData = [];
-  Object.entries(groupedData).forEach(([kategori, items]) => {
+  Object.entries(sortedGroupedData).forEach(([kategori, items]) => {
     flatData.push({ isHeader: true, kategori });
     items.forEach((item) => flatData.push(item));
   });
@@ -189,6 +290,123 @@ export default function MasterCOA() {
   // Paging logic
   const pageCount = Math.ceil(flatData.length / rowsPerPage);
   const pagedData = flatData.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+
+  // Fungsi untuk generate kode COA berdasarkan kategori
+  const generateKodeCOA = (kategoryCOAId) => {
+    if (!kategoryCOAId) return "";
+    
+    // Cari kategori yang dipilih
+    const selectedKategori = kategoriList.find(k => String(k.id) === String(kategoryCOAId));
+    if (!selectedKategori) return "";
+    
+    const kodeKategori = selectedKategori.kode;
+    
+    // Filter data COA berdasarkan kategori yang sama (tidak termasuk data yang sedang diedit)
+    const coaInSameCategory = data.filter(coa => {
+      const isInSameCategory = coa.masterCategoryCOA && String(coa.masterCategoryCOA.id) === String(kategoryCOAId);
+      const isNotCurrentEdit = editId ? coa.id !== editId : true;
+      return isInSameCategory && isNotCurrentEdit;
+    });
+    
+    // Jika tidak ada COA dalam kategori ini, mulai dari format default
+    if (coaInSameCategory.length === 0) {
+      // Cek apakah kode kategori sudah berformat x-xxx, jika ya gunakan format yang sama
+      if (kodeKategori.includes('-')) {
+        const parts = kodeKategori.split('-');
+        const prefixKategori = parts[0]; // Ambil bagian sebelum strip pertama
+        return `${prefixKategori}-001`; // Format 3 digit dengan leading zero
+      } else {
+        return `${kodeKategori}001`;
+      }
+    }
+    
+    // Cari kode dengan format separator - untuk menentukan pola
+    const coaWithSeparator = coaInSameCategory.find(coa => coa.kode.includes('-'));
+    
+    if (coaWithSeparator) {
+      // Ada data dengan separator -, ikuti pola tersebut
+      // Ambil semua nomor setelah separator terakhir dari kode-kode yang ada
+      const nomorUrut = coaInSameCategory
+        .map(coa => {
+          const kodeStr = coa.kode.toString();
+          const parts = kodeStr.split('-');
+          
+          if (parts.length >= 2) {
+            // Ambil angka setelah strip terakhir, batasi 3 digit terakhir
+            const nomorBelakang = parts[parts.length - 1];
+            
+            // Batasi hanya 3 digit terakhir
+            let limitedNumber;
+            if (nomorBelakang.length > 3) {
+              limitedNumber = nomorBelakang.slice(-3); // Ambil 3 digit terakhir
+            } else {
+              limitedNumber = nomorBelakang;
+            }
+            
+            const nomor = parseInt(limitedNumber, 10);
+            console.log(`Parsing kode ${kodeStr}: parts=${JSON.stringify(parts)}, nomorBelakang="${nomorBelakang}", limited="${limitedNumber}", parsed=${nomor}`);
+            return isNaN(nomor) ? 0 : nomor;
+          }
+          return 0;
+        })
+        .filter(num => num > 0)
+        .sort((a, b) => b - a); // Sort descending untuk ambil yang terbesar
+      
+      // Ambil nomor terbesar dan tambah 1
+      const maxNumber = nomorUrut.length > 0 ? nomorUrut[0] : 0;
+      const nextNumber = maxNumber + 1;
+      
+      // Format nextNumber dengan 3 digit (leading zero)
+      const formattedNextNumber = nextNumber.toString().padStart(3, '0');
+      
+      // Ambil prefix dari kode sample (bagian sebelum strip terakhir)
+      const sampleKode = coaWithSeparator.kode;
+      const sampleParts = sampleKode.split('-');
+      
+      let prefix;
+      if (sampleParts.length >= 2) {
+        // Ambil semua bagian kecuali bagian terakhir, lalu gabungkan dengan -
+        prefix = sampleParts.slice(0, -1).join('-');
+      } else {
+        prefix = sampleParts[0];
+      }
+      
+      const finalResult = `${prefix}-${formattedNextNumber}`;
+      
+      console.log(`Generate dengan separator (3 digit):`, {
+        sampleKode,
+        sampleParts,
+        prefix,
+        maxNumber,
+        nextNumber,
+        formattedNextNumber,
+        finalResult
+      });
+      
+      return finalResult;
+      
+    } else {
+      // Tidak ada separator, gunakan format tanpa separator
+      const nomorUrut = coaInSameCategory
+        .map(coa => {
+          const kodeStr = coa.kode.toString();
+          if (kodeStr.startsWith(kodeKategori)) {
+            const nomorBagian = kodeStr.substring(kodeKategori.length);
+            const nomor = parseInt(nomorBagian, 10);
+            return isNaN(nomor) ? 0 : nomor;
+          }
+          return 0;
+        })
+        .filter(num => num > 0)
+        .sort((a, b) => b - a);
+      
+      const maxNumber = nomorUrut.length > 0 ? nomorUrut[0] : 0;
+      const nextNumber = maxNumber + 1;
+      const formattedNumber = nextNumber.toString().padStart(3, '0');
+      
+      return `${kodeKategori}${formattedNumber}`;
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -199,19 +417,54 @@ export default function MasterCOA() {
           className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md border"
         >
           <div className="space-y-4">
+            {/* Button Kosongkan di atas form */}
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={handleResetForm}
+                className="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition text-sm"
+                title="Kosongkan semua field"
+              >
+                Kosongkan
+              </button>
+            </div>
+            
             <div>
               <label className="block mb-1 font-semibold text-gray-700">
                 Kode Akun
+                {!editId && (
+                  <span className="text-sm text-gray-500 font-normal ml-2">
+                    (Auto-generate saat pilih kategori)
+                  </span>
+                )}
               </label>
-              <input
-                type="text"
-                name="kode"
-                value={form.kode}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                placeholder="Contoh: 1001"
-                required
-              />
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  name="kode"
+                  value={form.kode}
+                  onChange={handleChange}
+                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  placeholder="Contoh: 1001"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (form.masterCategoryCOAId) {
+                      const generatedKode = generateKodeCOA(form.masterCategoryCOAId);
+                      setForm(prev => ({ ...prev, kode: generatedKode }));
+                    } else {
+                      alert("Pilih kategori COA terlebih dahulu!");
+                    }
+                  }}
+                  disabled={!form.masterCategoryCOAId}
+                  className="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition text-sm"
+                  title="Generate kode otomatis berdasarkan kategori"
+                >
+                  Auto
+                </button>
+              </div>
             </div>
             <div>
               <label className="block mb-1 font-semibold text-gray-700">
@@ -241,7 +494,7 @@ export default function MasterCOA() {
                 <option value="">Pilih Kategori</option>
                 {kategoriList.map((kat) => (
                   <option key={kat.id} value={kat.id}>
-                    {kat.nama} ({kat.tipeAkun})
+                    {kat.kode} - {kat.nama} ({kat.tipeAkun})
                   </option>
                 ))}
               </select>
@@ -251,22 +504,33 @@ export default function MasterCOA() {
                 Saldo Awal
               </label>
               <input
-                type="number"
+                type="text"
                 name="saldoAwal"
-                value={form.saldoAwal}
+                value={formattedSaldoAwal}
                 onChange={handleChange}
+                onBlur={handleSaldoAwalBlur}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
                 placeholder="Masukkan saldo awal"
-                min={0}
               />
             </div>
             {error && <div className="text-red-500 text-sm">{error}</div>}
-            <button
-              type="submit"
-              className="w-full bg-indigo-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-600 transition"
-            >
-              Simpan
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-600 transition"
+              >
+                {editId ? 'Update' : 'Simpan'}
+              </button>
+              {editId && (
+                <button
+                  type="button"
+                  onClick={handleResetForm}
+                  className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
         </form>
         <div className="flex-1">
@@ -341,10 +605,12 @@ export default function MasterCOA() {
                       <td className="px-3 py-2">{row.nama}</td>
                       <td className="px-3 py-2">
                         {row.masterCategoryCOA
-                          ? `${row.masterCategoryCOA.nama} (${row.masterCategoryCOA.tipeAkun})`
+                          ? `${row.masterCategoryCOA.kode} - ${row.masterCategoryCOA.nama} (${row.masterCategoryCOA.tipeAkun})`
                           : "-"}
                       </td>
-                      <td className="px-3 py-2 text-right">{row.saldoAwal ?? 0}</td>
+                      <td className="px-3 py-2 text-right">
+                        {row.saldoAwal ? formatNumber(row.saldoAwal) : '0'}
+                      </td>
                       <td className="px-3 py-2">
                         <button
                           onClick={() => handleEdit(row)}

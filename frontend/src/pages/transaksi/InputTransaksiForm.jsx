@@ -9,6 +9,36 @@ function getTodayLocal() {
   return today.toISOString().slice(0, 10);
 }
 
+// Fungsi untuk format angka dengan pemisah ribuan koma dan desimal titik
+function formatNumber(value) {
+  if (!value) return '';
+  
+  // Hapus semua karakter non-digit dan titik desimal
+  let cleanValue = value.toString().replace(/[^\d.]/g, '');
+  
+  // Pastikan hanya ada satu titik desimal
+  const parts = cleanValue.split('.');
+  if (parts.length > 2) {
+    cleanValue = parts[0] + '.' + parts.slice(1).join('');
+  }
+  
+  // Convert ke number
+  const numericValue = parseFloat(cleanValue) || 0;
+  
+  // Format dengan pemisah ribuan (koma) dan desimal (titik) - format internasional
+  return new Intl.NumberFormat('en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2
+  }).format(numericValue);
+}
+
+// Fungsi untuk mengubah format angka kembali ke number
+function parseFormattedNumber(value) {
+  if (!value) return '';
+  // Hapus semua koma (pemisah ribuan) dan biarkan titik (desimal)
+  return value.toString().replace(/,/g, '');
+}
+
 const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
   const { user } = useAuth();
   const [form, setForm] = useState({
@@ -29,6 +59,10 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
   const [isGeneratingNoTransaksi, setIsGeneratingNoTransaksi] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTransaksiId, setSelectedTransaksiId] = useState(null);
+  
+  // State untuk nilai yang diformat
+  const [formattedDebit, setFormattedDebit] = useState('');
+  const [formattedKredit, setFormattedKredit] = useState('');
 
   // Fungsi untuk handle double click row (untuk edit)
   const handleRowDoubleClick = useCallback((transaksi) => {
@@ -75,6 +109,10 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     console.log("Setting form data:", newFormData);
     setForm(newFormData);
     
+    // Set nilai yang diformat untuk debit dan kredit
+    setFormattedDebit(transaksi.debit ? formatNumber(transaksi.debit) : '');
+    setFormattedKredit(transaksi.kredit ? formatNumber(transaksi.kredit) : '');
+    
     // Trigger COA change untuk parent component
     if (onCOAChange && coaAkunBankValue) {
       onCOAChange(coaAkunBankValue);
@@ -94,6 +132,8 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
       debit: "",
       kredit: ""
     });
+    setFormattedDebit('');
+    setFormattedKredit('');
     setIsEditMode(false);
     setSelectedTransaksiId(null);
   }, []);
@@ -114,19 +154,37 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     api.get("/master-coa")
       .then(res => {
         setMasterCoaList(res.data);
-        setAkunTransaksiOptions(
-          res.data.map(coa => ({
+        // Filter untuk menghilangkan COA yang sedang dipilih sebagai COA Akun Bank
+        const filteredOptions = res.data
+          .filter(coa => {
+            // Cari COA Bank yang sedang dipilih
+            const selectedCOA = coaList.find(bankCoa => String(bankCoa.id) === String(form.coaAkunBank));
+            // Jika ada COA Bank yang dipilih, hilangkan dari opsi akun transaksi
+            return !selectedCOA || coa.kode !== selectedCOA.kode;
+          })
+          .sort((a, b) => {
+            // Urutkan berdasarkan kode akun secara ascending (numerik)
+            const kodeA = parseFloat(a.kode) || 0;
+            const kodeB = parseFloat(b.kode) || 0;
+            if (kodeA !== kodeB) {
+              return kodeA - kodeB;
+            }
+            // Jika sama secara numerik, urutkan secara alfabet
+            return a.kode.localeCompare(b.kode);
+          })
+          .map(coa => ({
             value: coa.kode.toString(),
-            label: `${coa.nama} (${coa.kode})`,
+            label: `(${coa.kode}) ${coa.nama}`,
             masterCategoryCOA: coa.masterCategoryCOA
-          }))
-        );
+          }));
+        
+        setAkunTransaksiOptions(filteredOptions);
       })
       .catch(() => {
         setMasterCoaList([]);
         setAkunTransaksiOptions([]);
       });
-  }, []);
+  }, [coaList, form.coaAkunBank]); // Tambahkan dependency
 
   // Debug: Log form changes
   useEffect(() => {
@@ -234,10 +292,10 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
       });
       
       // Tambahkan suffix -tukar
-      return response.data.noTransaksi + "-tukar";
+      return response.data.noTransaksi;
     } catch (error) {
       console.error("Error generating nomor transaksi tukar:", error);
-      return originalNoTransaksi + "-tukar";
+      return originalNoTransaksi;
     }
   };
 
@@ -249,26 +307,66 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
       const newForm = { ...form };
       
       if (name === "debit") {
-        newForm.debit = value;
+        // Simpan nilai input langsung ke state formatted (untuk ditampilkan)
+        setFormattedDebit(value);
+        
+        // Simpan nilai asli tanpa format ke form state
+        const rawValue = parseFormattedNumber(value);
+        newForm.debit = rawValue;
+        
         // Jika debit diisi, clear kredit
-        if (value && value !== "0") {
+        if (rawValue && rawValue !== "0") {
           newForm.kredit = "";
+          setFormattedKredit("");
         }
       } else if (name === "kredit") {
-        newForm.kredit = value;
+        // Simpan nilai input langsung ke state formatted (untuk ditampilkan)
+        setFormattedKredit(value);
+        
+        // Simpan nilai asli tanpa format ke form state
+        const rawValue = parseFormattedNumber(value);
+        newForm.kredit = rawValue;
+        
         // Jika kredit diisi, clear debit
-        if (value && value !== "0") {
+        if (rawValue && rawValue !== "0") {
           newForm.debit = "";
+          setFormattedDebit("");
         }
       }
       
       setForm(newForm);
     } else {
-      setForm({ ...form, [name]: value });
+      const newForm = { ...form, [name]: value };
+      
+      // Jika COA Akun Bank berubah, cek apakah akun transaksi yang dipilih sama dengan COA Bank yang baru
+      if (name === "coaAkunBank") {
+        const selectedCOA = coaList.find(bankCoa => String(bankCoa.id) === String(value));
+        if (selectedCOA && form.akunTransaksi === selectedCOA.kode) {
+          // Reset akun transaksi jika sama dengan COA Bank yang dipilih
+          newForm.akunTransaksi = "";
+        }
+      }
+      
+      setForm(newForm);
     }
     
     if (name === "coaAkunBank" && onCOAChange) {
       onCOAChange(value);
+    }
+  };
+
+  // Fungsi untuk format angka saat blur (kehilangan focus)
+  const handleDebitBlur = () => {
+    if (formattedDebit) {
+      const formatted = formatNumber(formattedDebit);
+      setFormattedDebit(formatted);
+    }
+  };
+
+  const handleKreditBlur = () => {
+    if (formattedKredit) {
+      const formatted = formatNumber(formattedKredit);
+      setFormattedKredit(formatted);
     }
   };
 
@@ -334,7 +432,7 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               coaAkunBank: akunTransaksiCOA.kode, // COA Akun Bank jadi kode akun transaksi
               tanggal: new Date(form.tanggal).toISOString(),
               akunTransaksi: coaBankAsli ? coaBankAsli.kode : coaBankKode, // Akun transaksi jadi kode COA Bank
-              deskripsi: `dari ${form.noTransaksi}`,
+              deskripsi: form.noTransaksi,
               projectNo: form.projectNo,
               projectName: form.projectName,
               debit: form.kredit ? parseFloat(form.kredit) : 0, // Tukar
@@ -366,6 +464,10 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
           debit: "",
           kredit: ""
         });
+        
+        // Reset nilai format
+        setFormattedDebit('');
+        setFormattedKredit('');
         
         // Generate nomor transaksi untuk transaksi berikutnya
         if (form.coaAkunBank && user?.id) {
@@ -493,10 +595,11 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
             </label>
             <div className="flex gap-2">
               <input
-                type="number"
+                type="text"
                 name="debit"
-                value={form.debit}
+                value={formattedDebit}
                 onChange={handleChange}
+                onBlur={handleDebitBlur}
                 disabled={form.kredit && form.kredit !== "0"}
                 className={`flex-1 border rounded px-3 py-2 ${
                   form.kredit && form.kredit !== "0" 
@@ -510,7 +613,10 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               {form.debit && form.debit !== "0" && (
                 <button
                   type="button"
-                  onClick={() => setForm({...form, debit: ""})}
+                  onClick={() => {
+                    setForm({...form, debit: ""});
+                    setFormattedDebit("");
+                  }}
                   className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
                   title="Clear Debit"
                 >
@@ -531,10 +637,11 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
             </label>
             <div className="flex gap-2">
               <input
-                type="number"
+                type="text"
                 name="kredit"
-                value={form.kredit}
+                value={formattedKredit}
                 onChange={handleChange}
+                onBlur={handleKreditBlur}
                 disabled={form.debit && form.debit !== "0"}
                 className={`flex-1 border rounded px-3 py-2 ${
                   form.debit && form.debit !== "0" 
@@ -548,7 +655,10 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               {form.kredit && form.kredit !== "0" && (
                 <button
                   type="button"
-                  onClick={() => setForm({...form, kredit: ""})}
+                  onClick={() => {
+                    setForm({...form, kredit: ""});
+                    setFormattedKredit("");
+                  }}
                   className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
                   title="Clear Kredit"
                 >

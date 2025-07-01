@@ -1,13 +1,46 @@
 package main
 
 import (
+	"fmt"
 	"project-akuntansi-backend/config"
 	"project-akuntansi-backend/handlers"
 	"project-akuntansi-backend/models"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
+
+func migrateKodeCategory(db *gorm.DB) {
+	var categories []models.MasterCategoryCOA
+	db.Where("kode = '' OR kode IS NULL").Find(&categories)
+
+	if len(categories) > 0 {
+		fmt.Printf("Migrating %d categories without kode\n", len(categories))
+
+		for i, cat := range categories {
+			var kode string
+			switch cat.TipeAkun {
+			case "Asset":
+				kode = fmt.Sprintf("AST%03d", i+1)
+			case "Kewajiban":
+				kode = fmt.Sprintf("LIA%03d", i+1)
+			case "Modal":
+				kode = fmt.Sprintf("EQT%03d", i+1)
+			case "Pendapatan":
+				kode = fmt.Sprintf("REV%03d", i+1)
+			case "Beban":
+				kode = fmt.Sprintf("EXP%03d", i+1)
+			default:
+				kode = fmt.Sprintf("GEN%03d", i+1)
+			}
+
+			db.Model(&cat).Update("kode", kode)
+			fmt.Printf("Updated category ID %d (%s) with kode %s\n", cat.ID, cat.Nama, kode)
+		}
+		fmt.Println("Migration completed!")
+	}
+}
 
 func main() {
 	db, err := config.ConnectDB()
@@ -15,6 +48,9 @@ func main() {
 		panic("failed to connect database")
 	}
 	db.AutoMigrate(&models.Jurnal{}, &models.JurnalDetail{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{})
+
+	// Data migration untuk kode category yang kosong
+	migrateKodeCategory(db)
 
 	r := gin.Default()
 

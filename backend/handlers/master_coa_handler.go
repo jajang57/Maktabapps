@@ -29,6 +29,20 @@ func PostMasterCOA(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+
+		// Validasi kode tidak boleh kosong
+		if coa.Kode == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Kode tidak boleh kosong"})
+			return
+		}
+
+		// Cek duplikasi kode
+		var existing models.MasterCOA
+		if err := db.Where("kode = ?", coa.Kode).First(&existing).Error; err == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Kode sudah digunakan"})
+			return
+		}
+
 		if err := db.Create(&coa).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -41,11 +55,41 @@ func PostMasterCOA(db *gorm.DB) gin.HandlerFunc {
 func DeleteMasterCOA(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
+
+		// Validasi ID
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "ID is required"})
+			return
+		}
+
+		// Cek apakah record ada
+		var coa models.MasterCOA
+		if err := db.First(&coa, id).Error; err != nil {
+			if err == gorm.ErrRecordNotFound {
+				c.JSON(http.StatusNotFound, gin.H{"error": "COA not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+			}
+			return
+		}
+
+		// Cek apakah COA sudah digunakan di input transaksi (berdasarkan kode COA)
+		var transaksiCount int64
+		if err := db.Model(&models.InputTransaksi{}).Where("coa_akun_bank = ? OR akun_transaksi = ?", coa.Kode, coa.Kode).Count(&transaksiCount).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+			return
+		}
+
+		if transaksiCount > 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "COA tidak dapat dihapus karena sudah digunakan di transaksi"})
+			return
+		}
+
 		if err := db.Delete(&models.MasterCOA{}, id).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-		c.JSON(http.StatusOK, gin.H{"message": "deleted"})
+		c.JSON(http.StatusOK, gin.H{"message": "COA deleted successfully"})
 	}
 }
 
@@ -53,16 +97,54 @@ func DeleteMasterCOA(db *gorm.DB) gin.HandlerFunc {
 func UpdateMasterCOA(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
+
+		// Validasi ID
+		if id == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "ID is required"})
+			return
+		}
+
 		var input models.MasterCOA
 		if err := c.ShouldBindJSON(&input); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
+
 		var coa models.MasterCOA
 		if err := db.First(&coa, id).Error; err != nil {
-			c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
+			if err == gorm.ErrRecordNotFound {
+				c.JSON(http.StatusNotFound, gin.H{"error": "COA not found"})
+			} else {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+			}
 			return
 		}
+
+		// Cek apakah COA sudah digunakan di input transaksi (berdasarkan kode COA)
+		var transaksiCount int64
+		if err := db.Model(&models.InputTransaksi{}).Where("coa_akun_bank = ? OR akun_transaksi = ?", coa.Kode, coa.Kode).Count(&transaksiCount).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+			return
+		}
+
+		if transaksiCount > 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "COA tidak dapat diubah karena sudah digunakan di transaksi"})
+			return
+		}
+
+		// Validasi kode tidak boleh kosong
+		if input.Kode == "" {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Kode tidak boleh kosong"})
+			return
+		}
+
+		// Cek duplikasi kode (kecuali untuk record yang sedang diupdate)
+		var existing models.MasterCOA
+		if err := db.Where("kode = ? AND id != ?", input.Kode, id).First(&existing).Error; err == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Kode sudah digunakan"})
+			return
+		}
+
 		coa.Kode = input.Kode
 		coa.Nama = input.Nama
 		coa.MasterCategoryCOAID = input.MasterCategoryCOAID
