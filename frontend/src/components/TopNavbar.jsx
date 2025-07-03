@@ -46,14 +46,17 @@ export default function TopNavbar() {
     {
       name: "Master Data",
       dropdown: [
-        { name: "Master Item", to: "/master-data/item" },
         {
-          name: "COA",
+          name: "AKUN",
           subDropdown: [
-            { name: "Kategori COA", to: "/master-data/mastercatcoa" },
-            { name: "COA", to: "/master-data/coa" },
+            { name: "Kategori Akun", to: "/master-data/mastercatcoa" },
+            { name: "Akun", to: "/master-data/coa" },
           ],
         },
+        { name: "Pemasok", to: "/master-data/pemasok" },
+        { name: "Pembeli", to: "/master-data/pembeli" },
+        { name: "Karyawan", to: "/master-data/karyawan" },
+        { name: "Project", to: "/master-data/project" },
       ],
     },
     {

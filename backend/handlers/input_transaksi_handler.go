@@ -69,12 +69,43 @@ func GetGenerateNoTransaksi(db *gorm.DB) gin.HandlerFunc {
 // GET all input transaksi
 func GetInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var list []models.InputTransaksi
-		if err := db.Order("id desc").Find(&list).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		coaAkunBank := c.Query("coaAkunBank")
+
+		// ✅ ENHANCED: Debug logging
+		fmt.Printf("========== DEBUG INPUT TRANSAKSI ==========\n")
+		fmt.Printf("[DEBUG] Received parameter: '%s'\n", coaAkunBank)
+		fmt.Printf("[DEBUG] Parameter length: %d\n", len(coaAkunBank))
+
+		var transaksi []models.InputTransaksi
+
+		query := db.Order("tanggal ASC, id ASC")
+		if coaAkunBank != "" {
+			// ✅ FIXED: Use correct field name (snake_case)
+			fmt.Printf("[DEBUG] Adding WHERE clause: coa_akun_bank = '%s'\n", coaAkunBank)
+			query = query.Where("coa_akun_bank = ?", coaAkunBank)
+		} else {
+			fmt.Printf("[DEBUG] No filter applied - returning all records\n")
+		}
+
+		if err := query.Find(&transaksi).Error; err != nil {
+			fmt.Printf("[ERROR] Database query failed: %v\n", err)
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch transaksi"})
 			return
 		}
-		c.JSON(http.StatusOK, list)
+
+		fmt.Printf("[DEBUG] Found %d records after filtering\n", len(transaksi))
+
+		// ✅ ENHANCED: Debug each record's coa_akun_bank field
+		for i, t := range transaksi {
+			if i < 5 { // Log first 5 records
+				fmt.Printf("[DEBUG] Record %d: ID=%d, CoaAkunBank='%s', NoTransaksi='%s'\n",
+					i+1, t.ID, t.CoaAkunBank, t.NoTransaksi)
+			}
+		}
+
+		fmt.Printf("==========================================\n")
+
+		c.JSON(http.StatusOK, transaksi)
 	}
 }
 

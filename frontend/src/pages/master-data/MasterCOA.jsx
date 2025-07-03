@@ -224,6 +224,13 @@ export default function MasterCOA() {
     }
   };
 
+  // Fungsi untuk menghilangkan format saat focus (field di-klik)
+  const handleSaldoAwalFocus = () => {
+    if (form.saldoAwal) {
+      setFormattedSaldoAwal(form.saldoAwal); // Tampilkan nilai mentah
+    }
+  };
+
   // Fungsi untuk kosongkan/reset form
   const handleResetForm = () => {
     setForm({ kode: "", nama: "", masterCategoryCOAId: "", saldoAwal: "" });
@@ -509,6 +516,7 @@ export default function MasterCOA() {
                 value={formattedSaldoAwal}
                 onChange={handleChange}
                 onBlur={handleSaldoAwalBlur}
+                onFocus={handleSaldoAwalFocus}
                 className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
                 placeholder="Masukkan saldo awal"
               />

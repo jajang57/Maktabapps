@@ -47,7 +47,7 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&models.Jurnal{}, &models.JurnalDetail{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{})
+	db.AutoMigrate(&models.Jurnal{}, &models.JurnalDetail{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{})
 
 	// Data migration untuk kode category yang kosong
 	migrateKodeCategory(db)
@@ -107,6 +107,15 @@ func main() {
 		api.PUT("/input-transaksi/:id", handlers.UpdateInputTransaksi(db))
 		api.DELETE("/input-transaksi/:id", handlers.DeleteInputTransaksi(db))
 		api.GET("/generate-no-transaksi", handlers.GetGenerateNoTransaksi(db))
+
+		// Master Project Routes
+		masterProjectRoutes := api.Group("/master-project")
+		{
+			masterProjectRoutes.GET("", handlers.GetMasterProjects(db))
+			masterProjectRoutes.POST("", handlers.CreateMasterProject(db))
+			masterProjectRoutes.PUT("/:id", handlers.UpdateMasterProject(db))
+			masterProjectRoutes.DELETE("/:id", handlers.DeleteMasterProject(db))
+		}
 	}
 
 	r.Run("0.0.0.0:8080")

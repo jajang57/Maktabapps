@@ -9,6 +9,10 @@ import Dashboard from "./pages/Dashboard";
 import MasterItem from "./pages/master-data/MasterItem";
 import MasterCOA from "./pages/master-data/MasterCOA";
 import MasterCategoryCOA from "./pages/master-data/MasterCategoryCOA";
+import MasterPemasok from "./pages/master-data/MasterPemasok";
+import MasterPembeli from "./pages/master-data/MasterPembeli";
+import MasterKaryawan from "./pages/master-data/MasterKaryawan";
+import MasterProject from "./pages/master-data/MasterProject";
 import Setting from "./pages/Setting";
 import Transaksi from "./pages/Transaksi";
 import JurnalUmum from "./pages/transaksi/JurnalUmum";
@@ -57,6 +61,34 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <MasterCategoryCOA />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/master-data/pemasok" element={
+            <ProtectedRoute>
+              <Layout>
+                <MasterPemasok />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/master-data/pembeli" element={
+            <ProtectedRoute>
+              <Layout>
+                <MasterPembeli />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/master-data/project" element={
+            <ProtectedRoute>
+              <Layout>
+                <MasterProject />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/master-data/karyawan" element={
+            <ProtectedRoute>
+              <Layout>
+                <MasterKaryawan />
               </Layout>
             </ProtectedRoute>
           } />

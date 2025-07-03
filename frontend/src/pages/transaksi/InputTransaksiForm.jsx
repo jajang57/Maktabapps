@@ -27,7 +27,7 @@ function formatNumber(value) {
   
   // Format dengan pemisah ribuan (koma) dan desimal (titik) - format internasional
   return new Intl.NumberFormat('en-US', {
-    minimumFractionDigits: 0,
+    minimumFractionDigits: 2,
     maximumFractionDigits: 2
   }).format(numericValue);
 }
@@ -40,29 +40,109 @@ function parseFormattedNumber(value) {
 }
 
 const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
-  const { user } = useAuth();
+  const { user } = useAuth(); // ✅ FIXED: Add this line
+
   const [form, setForm] = useState({
-    noTransaksi: "",
     coaAkunBank: "",
-    tanggal: getTodayLocal(),
+    noTransaksi: "",
+    tanggal: getTodayLocal(), // ✅ Set default
     akunTransaksi: "",
+    debit: "",
+    kredit: "",
     deskripsi: "",
     projectNo: "",
-    projectName: "",
-    debit: "",
-    kredit: ""
+    projectName: ""
   });
 
   const [coaList, setCoaList] = useState([]);
-  const [akunTransaksiOptions, setAkunTransaksiOptions] = useState([]);
   const [masterCoaList, setMasterCoaList] = useState([]);
-  const [isGeneratingNoTransaksi, setIsGeneratingNoTransaksi] = useState(false);
+  const [projectList, setProjectList] = useState([]);
+  const [akunTransaksiOptions, setAkunTransaksiOptions] = useState([]); // ✅ FIXED: Add this state
   const [isEditMode, setIsEditMode] = useState(false);
   const [selectedTransaksiId, setSelectedTransaksiId] = useState(null);
-  
-  // State untuk nilai yang diformat
-  const [formattedDebit, setFormattedDebit] = useState('');
-  const [formattedKredit, setFormattedKredit] = useState('');
+  const [isGeneratingNoTransaksi, setIsGeneratingNoTransaksi] = useState(false);
+  const [formattedDebit, setFormattedDebit] = useState("");
+  const [formattedKredit, setFormattedKredit] = useState("");
+
+  // ✅ FIXED: Fetch master project data
+  useEffect(() => {
+    console.log("🔍 Starting to fetch master project data...");
+    
+    api.get("/master-project")
+      .then(res => {
+        console.log("✅ Master project API RAW response:", res);
+        console.log("📊 Response data structure:", {
+          status: res.status,
+          statusText: res.statusText,
+          headers: res.headers,
+          data: res.data,
+          dataType: typeof res.data,
+          dataStringified: JSON.stringify(res.data, null, 2),
+          hasData: res.data ? 'Yes' : 'No',
+          hasDataArray: res.data?.data ? 'Yes' : 'No',
+          dataLength: res.data?.data?.length || 0
+        });
+        
+        // Check structure lebih mendalam
+        if (res.data) {
+          console.log("🔬 Deep structure analysis:");
+          console.log("res.data keys:", Object.keys(res.data));
+          
+          if (res.data.data) {
+            console.log("res.data.data type:", typeof res.data.data);
+            console.log("res.data.data is array:", Array.isArray(res.data.data));
+            console.log("res.data.data length:", res.data.data.length);
+            
+            if (Array.isArray(res.data.data) && res.data.data.length > 0) {
+              console.log("📋 First project sample:", res.data.data[0]);
+              console.log("📋 First project keys:", Object.keys(res.data.data[0]));
+              
+              // Check each project item
+              res.data.data.forEach((project, index) => {
+                console.log(`🔍 Detailed Project ${index}:`, {
+                  raw: project,
+                  ID: project.ID,
+                  id: project.id,
+                  kode_project: project.kode_project,
+                  nama_project: project.nama_project,
+                  created_at: project.created_at,
+                  updated_at: project.updated_at,
+                  allFields: Object.keys(project),
+                  fieldTypes: Object.keys(project).reduce((acc, key) => {
+                    acc[key] = typeof project[key];
+                    return acc;
+                  }, {})
+                });
+              });
+            }
+          }
+        }
+        
+        const projectData = res.data.data || [];
+        setProjectList(projectData);
+        console.log("💾 Set projectList to:", projectData);
+        console.log("💾 projectList type:", typeof projectData);
+        console.log("💾 projectList is array:", Array.isArray(projectData));
+      })
+      .catch(err => {
+        console.error("❌ Error fetching master project:", err);
+        console.error("❌ Error details:", {
+          message: err.message,
+          response: err.response?.data,
+          status: err.response?.status,
+          statusText: err.response?.statusText,
+          stack: err.stack
+        });
+        setProjectList([]);
+      });
+  }, []);
+
+  // ✅ FIXED: Debug projectList changes
+  useEffect(() => {
+    console.log("🔄 ProjectList state updated:", projectList);
+    console.log("ProjectList length:", projectList.length);
+    console.log("ProjectList is array?", Array.isArray(projectList));
+  }, [projectList]);
 
   // Fungsi untuk handle double click row (untuk edit)
   const handleRowDoubleClick = useCallback((transaksi) => {
@@ -122,8 +202,8 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
   // Fungsi untuk reset form (Cancel)
   const handleResetForm = useCallback(() => {
     setForm({
-      noTransaksi: "",
       coaAkunBank: "",
+      noTransaksi: "",
       tanggal: getTodayLocal(),
       akunTransaksi: "",
       deskripsi: "",
@@ -136,7 +216,10 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     setFormattedKredit('');
     setIsEditMode(false);
     setSelectedTransaksiId(null);
-  }, []);
+    if (onCOAChange) {
+      onCOAChange(""); // Reset filter di parent
+    }
+  }, [onCOAChange]);
 
   // Expose handleEdit function to parent via ref
   useImperativeHandle(ref, () => ({
@@ -144,12 +227,14 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     resetForm: handleResetForm
   }), [handleRowDoubleClick, handleResetForm]);
 
+  // ✅ FIXED: Fetch COA Kas Bank data
   useEffect(() => {
     api.get("/coa-kas-bank")
       .then(res => setCoaList(res.data))
       .catch(() => setCoaList([]));
   }, []);
 
+  // ✅ FIXED: Fetch Master COA data
   useEffect(() => {
     api.get("/master-coa")
       .then(res => {
@@ -246,12 +331,11 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
 
   // Auto-generate nomor transaksi ketika coaAkunBank atau tanggal berubah
   useEffect(() => {
-    // Hanya generate jika bukan mode edit
+    // Hanya generate jika bukan mode edit dan semua data tersedia
     if (!isEditMode && form.coaAkunBank && form.tanggal && user?.id) {
       generateNoTransaksi();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.coaAkunBank, form.tanggal, user?.id, isEditMode]);
+  }, [form.coaAkunBank, form.tanggal, user?.id, isEditMode]); // ✅ Dependencies clear
 
   // Fungsi untuk hapus transaksi
   const handleDeleteTransaksi = async () => {
@@ -299,74 +383,123 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     }
   };
 
+  // ✅ ADD: Missing function
+  function formatNumberWithCommas(value) {
+    if (!value) return '';
+    
+    // Remove any non-digit characters except decimal point
+    let cleanValue = value.toString().replace(/[^\d.]/g, '');
+    
+    // Ensure only one decimal point
+    const parts = cleanValue.split('.');
+    if (parts.length > 2) {
+      cleanValue = parts[0] + '.' + parts.slice(1).join('');
+    }
+    
+    // Convert to number and format
+    const numericValue = parseFloat(cleanValue) || 0;
+    
+    // Format with commas as thousand separators
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2
+    }).format(numericValue);
+  }
+
+  // ✅ FIXED: Enhanced handleChange
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Khusus untuk field debit dan kredit
-    if (name === "debit" || name === "kredit") {
-      const newForm = { ...form };
+    // ✅ ENHANCED: Debug COA change
+    if (name === "coaAkunBank") {
+      console.log("🔍 InputTransaksiForm - COA changed to:", value);
+      console.log("🔍 InputTransaksiForm - onCOAChange prop:", onCOAChange);
       
-      if (name === "debit") {
-        // Simpan nilai input langsung ke state formatted (untuk ditampilkan)
-        setFormattedDebit(value);
-        
-        // Simpan nilai asli tanpa format ke form state
-        const rawValue = parseFormattedNumber(value);
-        newForm.debit = rawValue;
-        
-        // Jika debit diisi, clear kredit
-        if (rawValue && rawValue !== "0") {
-          newForm.kredit = "";
-          setFormattedKredit("");
-        }
-      } else if (name === "kredit") {
-        // Simpan nilai input langsung ke state formatted (untuk ditampilkan)
-        setFormattedKredit(value);
-        
-        // Simpan nilai asli tanpa format ke form state
-        const rawValue = parseFormattedNumber(value);
-        newForm.kredit = rawValue;
-        
-        // Jika kredit diisi, clear debit
-        if (rawValue && rawValue !== "0") {
-          newForm.debit = "";
-          setFormattedDebit("");
-        }
+      const selectedCOA = coaList.find(coa => String(coa.id) === String(value));
+      console.log("🔍 InputTransaksiForm - Selected COA object:", selectedCOA);
+      
+      if (onCOAChange) {
+        console.log("🔍 InputTransaksiForm - Calling onCOAChange with ID:", value);
+        onCOAChange(value);
+      } else {
+        console.error("❌ InputTransaksiForm - onCOAChange prop not provided");
       }
-      
-      setForm(newForm);
-    } else {
-      const newForm = { ...form, [name]: value };
-      
-      // Jika COA Akun Bank berubah, cek apakah akun transaksi yang dipilih sama dengan COA Bank yang baru
-      if (name === "coaAkunBank") {
-        const selectedCOA = coaList.find(bankCoa => String(bankCoa.id) === String(value));
-        if (selectedCOA && form.akunTransaksi === selectedCOA.kode) {
-          // Reset akun transaksi jika sama dengan COA Bank yang dipilih
-          newForm.akunTransaksi = "";
-        }
-      }
-      
-      setForm(newForm);
     }
     
-    if (name === "coaAkunBank" && onCOAChange) {
-      onCOAChange(value);
+    // ✅ FIXED: Handle project selection
+    if (name === "projectNo") {
+      const selectedProject = projectList.find(project => project.kode_project === value);
+      setForm({
+        ...form,
+        projectNo: value,
+        projectName: selectedProject ? selectedProject.nama_project : ""
+      });
+      return;
     }
+    
+    // ✅ FIXED: Handle debit input
+    if (name === "debit") {
+      console.log("🔍 Debit input changed to:", value);
+      
+      // Allow user to type freely
+      setFormattedDebit(value);
+      
+      // Parse for internal storage
+      const numericValue = parseFormattedNumber(value);
+      console.log("🔍 Parsed debit value:", numericValue);
+      
+      setForm({ ...form, debit: numericValue });
+      return;
+    }
+    
+    // ✅ FIXED: Handle kredit input
+    if (name === "kredit") {
+      console.log("🔍 Kredit input changed to:", value);
+      
+      // Allow user to type freely
+      setFormattedKredit(value);
+      
+      // Parse for internal storage
+      const numericValue = parseFormattedNumber(value);
+      console.log("🔍 Parsed kredit value:", numericValue);
+      
+      setForm({ ...form, kredit: numericValue });
+      return;
+    }
+    
+    // ✅ Default case
+    setForm({ ...form, [name]: value });
   };
 
-  // Fungsi untuk format angka saat blur (kehilangan focus)
+  // ✅ FIXED: Enhanced blur handlers untuk auto-format
   const handleDebitBlur = () => {
     if (formattedDebit) {
-      const formatted = formatNumber(formattedDebit);
+      const formatted = formatNumberWithCommas(formattedDebit);
+      console.log("🔍 Formatting debit on blur:", formattedDebit, "->", formatted);
       setFormattedDebit(formatted);
     }
   };
 
   const handleKreditBlur = () => {
     if (formattedKredit) {
-      const formatted = formatNumber(formattedKredit);
+      const formatted = formatNumberWithCommas(formattedKredit);
+      console.log("🔍 Formatting kredit on blur:", formattedKredit, "->", formatted);
       setFormattedKredit(formatted);
+    }
+  };
+
+  // ✅ FIXED: Enhanced focus handlers untuk raw input
+  const handleDebitFocus = () => {
+    if (form.debit) {
+      console.log("🔍 Debit focus - showing raw value:", form.debit);
+      setFormattedDebit(form.debit.toString());
+    }
+  };
+
+  const handleKreditFocus = () => {
+    if (form.kredit) {
+      console.log("🔍 Kredit focus - showing raw value:", form.kredit);
+      setFormattedKredit(form.kredit.toString());
     }
   };
 
@@ -396,6 +529,21 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
         // Mode Edit - tidak ada transaksi ganda saat edit
         await api.put(`/input-transaksi/${selectedTransaksiId}`, dataToSend);
         alert("Transaksi berhasil diupdate!");
+        
+        // ✅ ENHANCED: Pass updated transaksi data
+        if (afterSubmit) {
+          afterSubmit(form.coaAkunBank, {
+            id: selectedTransaksiId,
+            tanggal: form.tanggal,
+            noTransaksi: form.noTransaksi,
+            coaAkunBank: form.coaAkunBank,
+            akunTransaksi: form.akunTransaksi,
+            debit: form.debit,
+            kredit: form.kredit,
+            deskripsi: form.deskripsi
+          });
+        }
+        
         handleResetForm();
       } else {
         // Mode Create
@@ -475,10 +623,76 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
         }
       }
       
-      if (afterSubmit) afterSubmit(form.coaAkunBank); // PANGGIL LANGSUNG SETELAH SIMPAN
+      if (afterSubmit) afterSubmit(form.coaAkunBank, {
+        tanggal: form.tanggal,
+        noTransaksi: form.noTransaksi,
+        id: Date.now(), // Temporary ID untuk tracking
+        coaAkunBank: form.coaAkunBank,
+        akunTransaksi: form.akunTransaksi,
+        debit: form.debit,
+        kredit: form.kredit,
+        deskripsi: form.deskripsi
+      }); // PANGGIL LANGSUNG SETELAH SIMPAN
     } catch (err) {
       alert(isEditMode ? "Gagal update transaksi" : "Gagal simpan transaksi");
     }
+  };
+
+  // ✅ FIXED: Project dropdown rendering yang lebih aman dan debug yang lebih detail
+  const renderProjectOptions = () => {
+    console.log("🎨 Rendering dropdown options...");
+    console.log("Current projectList:", projectList);
+    console.log("ProjectList length for dropdown:", projectList.length);
+    
+    if (!Array.isArray(projectList)) {
+      console.log("⚠️ ProjectList is not an array!");
+      return <option value="" disabled>Data tidak valid</option>;
+    }
+    
+    if (projectList.length === 0) {
+      console.log("⚠️ ProjectList is empty!");
+      return <option value="" disabled>Tidak ada data project</option>;
+    }
+    
+    return projectList.map((project, index) => {
+      console.log(`Rendering option ${index}:`, project);
+      console.log(`Project ${index} detailed check:`, {
+        hasID: !!project.ID,
+        hasId: !!project.id,
+        hasKodeProject: !!project.kode_project,
+        hasNamaProject: !!project.nama_project,
+        IDValue: project.ID,
+        idValue: project.id,
+        kodeProjectValue: project.kode_project,
+        namaProjectValue: project.nama_project,
+        allKeys: Object.keys(project)
+      });
+      
+      // ✅ FIXED: Check both uppercase and lowercase ID
+      const projectId = project.ID || project.id;
+      const projectKode = project.kode_project;
+      const projectNama = project.nama_project;
+      
+      if (!projectId || !projectKode) {
+        console.log(`⚠️ Project ${index} missing required fields:`, {
+          ID: projectId,
+          kode_project: projectKode,
+          nama_project: projectNama
+        });
+        return (
+          <option key={`missing-${index}`} value="" disabled>
+            Data project tidak lengkap (ID: {projectId}, Kode: {projectKode})
+          </option>
+        );
+      }
+      
+      console.log(`✅ Rendering valid option ${index}: ${projectKode} - ${projectNama}`);
+      return (
+        <option key={projectId} value={projectKode}>
+          {projectKode} - {projectNama || 'Nama tidak tersedia'}
+        </option>
+      );
+    });
   };
 
   return (
@@ -519,12 +733,6 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
                 </option>
               ))}
             </select>
-            {/* Debug info */}
-            {/* {isEditMode && (
-              <small className="text-gray-500 text-xs">
-                Debug: Selected COA ID = {form.coaAkunBank}
-              </small>
-            )} */}
           </div>
           <div>
             <label className="block mb-1 font-medium">Nomor Transaksi</label>
@@ -553,6 +761,7 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
             </div>
           </div>
         </div>
+
         {/* Baris 2: Tanggal, Akun Transaksi, Debit, Kredit */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
@@ -583,6 +792,8 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               ))}
             </select>
           </div>
+          
+          {/* ✅ FIXED: Input Debit */}
           <div>
             <label className="block mb-1 font-medium">
               Debit
@@ -600,6 +811,7 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
                 value={formattedDebit}
                 onChange={handleChange}
                 onBlur={handleDebitBlur}
+                onFocus={handleDebitFocus}
                 disabled={form.kredit && form.kredit !== "0"}
                 className={`flex-1 border rounded px-3 py-2 ${
                   form.kredit && form.kredit !== "0" 
@@ -625,6 +837,8 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               )}
             </div>
           </div>
+          
+          {/* ✅ FIXED: Input Kredit */}
           <div>
             <label className="block mb-1 font-medium">
               Kredit
@@ -642,6 +856,7 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
                 value={formattedKredit}
                 onChange={handleChange}
                 onBlur={handleKreditBlur}
+                onFocus={handleKreditFocus}
                 disabled={form.debit && form.debit !== "0"}
                 className={`flex-1 border rounded px-3 py-2 ${
                   form.debit && form.debit !== "0" 
@@ -668,17 +883,36 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
             </div>
           </div>
         </div>
-        {/* Baris 3: Project No & Project Name */}
+
+        {/* Baris 3: Deskripsi (Full Width) */}
+        <div>
+          <label className="block mb-1 font-medium">Deskripsi</label>
+          <input
+            type="text"
+            name="deskripsi"
+            value={form.deskripsi}
+            onChange={handleChange}
+            className="w-full border rounded px-3 py-2"
+          />
+        </div>
+
+        {/* Baris 4: Project No & Project Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block mb-1 font-medium">Project No</label>
-            <input
-              type="text"
+            <select
               name="projectNo"
               value={form.projectNo}
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
-            />
+            >
+              <option value="">Pilih Project</option>
+              {renderProjectOptions()}
+            </select>
+            {/* ✅ ADD: Debug info di bawah dropdown */}
+            <div className="text-xs text-gray-500 mt-1">
+              Debug: {projectList.length} projects loaded
+            </div>
           </div>
           <div>
             <label className="block mb-1 font-medium">Project Name</label>
@@ -687,50 +921,41 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               name="projectName"
               value={form.projectName}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
+              className="w-full border rounded px-3 py-2 bg-gray-100"
+              placeholder="Nama project akan terisi otomatis"
+              readOnly
             />
           </div>
         </div>
-        {/* Baris 4: Deskripsi & Tombol */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-          <div>
-            <label className="block mb-1 font-medium">Deskripsi</label>
-            <input
-              type="text"
-              name="deskripsi"
-              value={form.deskripsi}
-              onChange={handleChange}
-              className="w-full border rounded px-3 py-2"
-            />
-          </div>
-          <div className="flex gap-2 md:justify-end mt-4 md:mt-0">
-            <button
-              type="submit"
-              className={`px-6 py-2 rounded text-white ${
-                isEditMode 
-                  ? "bg-orange-500 hover:bg-orange-600" 
-                  : "bg-indigo-500 hover:bg-indigo-600"
-              }`}
-            >
-              {isEditMode ? "Update" : "Simpan"}
-            </button>
-            <button
-              type="button"
-              className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600"
-              onClick={handleDeleteTransaksi}
-              disabled={!isEditMode || !selectedTransaksiId}
-              title={!isEditMode ? "Pilih transaksi dengan double-click untuk menghapus" : "Hapus transaksi yang dipilih"}
-            >
-              Hapus
-            </button>
-            <button
-              type="button"
-              className="bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500"
-              onClick={handleResetForm}
-            >
-              Cancel
-            </button>
-          </div>
+
+        {/* Baris 5: Tombol */}
+        <div className="flex gap-2 justify-end mt-4">
+          <button
+            type="submit"
+            className={`px-6 py-2 rounded text-white ${
+              isEditMode 
+                ? "bg-orange-500 hover:bg-orange-600" 
+                : "bg-indigo-500 hover:bg-indigo-600"
+            }`}
+          >
+            {isEditMode ? "Update" : "Simpan"}
+          </button>
+          <button
+            type="button"
+            className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600"
+            onClick={handleDeleteTransaksi}
+            disabled={!isEditMode || !selectedTransaksiId}
+            title={!isEditMode ? "Pilih transaksi dengan double-click untuk menghapus" : "Hapus transaksi yang dipilih"}
+          >
+            Hapus
+          </button>
+          <button
+            type="button"
+            className="bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500"
+            onClick={handleResetForm}
+          >
+            Kosongkan
+          </button>
         </div>
       </form>
     </>

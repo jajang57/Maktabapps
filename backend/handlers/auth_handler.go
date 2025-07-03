@@ -3,6 +3,7 @@ package handlers
 import (
 	"crypto/rand"
 	"encoding/hex"
+	"fmt"
 	"net/http"
 	"project-akuntansi-backend/models"
 	"strings"
@@ -215,6 +216,7 @@ func generateToken(userID uint, username string, sessionID string) (string, erro
 func AuthMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		tokenString := c.GetHeader("Authorization")
+		fmt.Printf("[DEBUG AUTH] Raw Authorization header: %s\n", tokenString)
 
 		// Hapus "Bearer " prefix jika ada
 		if len(tokenString) > 7 && tokenString[:7] == "Bearer " {
@@ -222,10 +224,13 @@ func AuthMiddleware() gin.HandlerFunc {
 		}
 
 		if tokenString == "" {
+			fmt.Printf("[DEBUG AUTH] No token found\n")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak ditemukan"})
 			c.Abort()
 			return
 		}
+
+		fmt.Printf("[DEBUG AUTH] Token: %s\n", tokenString)
 
 		// Parse token
 		token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(token *jwt.Token) (interface{}, error) {
@@ -233,6 +238,7 @@ func AuthMiddleware() gin.HandlerFunc {
 		})
 
 		if err != nil || !token.Valid {
+			fmt.Printf("[DEBUG AUTH] Token parse error: %v, valid: %v\n", err, token.Valid)
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token tidak valid"})
 			c.Abort()
 			return
@@ -240,12 +246,15 @@ func AuthMiddleware() gin.HandlerFunc {
 
 		// Validasi claims dan single device login
 		if claims, ok := token.Claims.(*Claims); ok {
+			fmt.Printf("[DEBUG AUTH] Claims: UserID=%d, Username=%s\n", claims.UserID, claims.Username)
+			
 			// Get database connection from context atau setup
 			db := c.MustGet("db").(*gorm.DB)
 
 			// Cek apakah token masih aktif di database
 			var user models.User
 			if err := db.First(&user, claims.UserID).Error; err != nil {
+				fmt.Printf("[DEBUG AUTH] User not found in DB: %v\n", err)
 				c.JSON(http.StatusUnauthorized, gin.H{"error": "User tidak ditemukan"})
 				c.Abort()
 				return
@@ -253,6 +262,7 @@ func AuthMiddleware() gin.HandlerFunc {
 
 			// Validasi apakah token yang digunakan masih sama dengan yang tersimpan (single device)
 			if strings.TrimSpace(user.ActiveToken) != strings.TrimSpace(tokenString) {
+				fmt.Printf("[DEBUG AUTH] Token mismatch. DB token: %s, Request token: %s\n", user.ActiveToken, tokenString)
 				c.JSON(http.StatusUnauthorized, gin.H{
 					"error": "Session telah berakhir. Akun Anda sedang digunakan di device lain.",
 					"code":  "SINGLE_DEVICE_VIOLATION",
@@ -261,12 +271,15 @@ func AuthMiddleware() gin.HandlerFunc {
 				return
 			}
 
+			fmt.Printf("[DEBUG AUTH] Authentication successful for user: %s\n", claims.Username)
+
 			// Simpan data user ke context
 			c.Set("userID", claims.UserID)
 			c.Set("username", claims.Username)
 			c.Set("sessionID", claims.SessionID)
 			c.Set("user", user)
 		} else {
+			fmt.Printf("[DEBUG AUTH] Invalid token claims\n")
 			c.JSON(http.StatusUnauthorized, gin.H{"error": "Token claims tidak valid"})
 			c.Abort()
 			return
