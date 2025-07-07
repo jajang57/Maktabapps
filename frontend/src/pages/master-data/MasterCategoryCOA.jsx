@@ -1,4 +1,15 @@
 import { useState, useEffect, useRef } from "react";
+// Mapping tipe akun value ke nama
+const tipeAkunMap = {
+  "1": "Asset",
+  "2": "Kewajiban",
+  "3": "Modal",
+  "4": "Pendapatan",
+  "5": "Harga Pokok Penjualan",
+  "6": "Beban",
+  "7": "Pendapatan Lainnya",
+  "8": "Beban Lainnya",
+};
 import DataTable from "react-data-table-component";
 import api from "../../utils/api";
 
@@ -120,7 +131,7 @@ export default function MasterCategoryCOA() {
   const columns = [
     { name: "Kode", selector: (row) => row.kode, sortable: true, width: "100px" },
     { name: "Kategori COA", selector: (row) => row.nama, sortable: true },
-    { name: "Tipe Akun", selector: (row) => row.tipeAkun, sortable: true },
+    { name: "Tipe Akun", selector: (row) => tipeAkunMap[row.tipeAkun] || row.tipeAkun, sortable: true },
     {
       name: "Kas & Bank",
       selector: (row) => (row.isKasBank ? "✅" : ""),
@@ -211,14 +222,14 @@ export default function MasterCategoryCOA() {
                 required
               >
                 <option value="">Pilih Tipe Akun</option>
-                <option value="Asset">Asset</option> {/* 1 */}
-                <option value="Kewajiban">Kewajiban</option> {/* 2 */}
-                <option value="Modal">Modal</option> {/* 3 */}
-                <option value="Pendapatan">Pendapatan</option> {/* 4 */}
-                <option value="Harga Pokok Penjualan">Harga Pokok Penjualan</option> {/* 5 */}
-                <option value="Beban">Beban</option> {/* 6 */}
-                <option value="Pendapatan Lainnya">Pendapatan Lainnya</option> {/* 7 */}
-                <option value="Beban Lainnya">Beban Lainnya</option> {/* 8 */}
+                <option value="1">Asset</option> {/* 1 */}
+                <option value="2">Kewajiban</option> {/* 2 */}
+                <option value="3">Modal</option> {/* 3 */}
+                <option value="4">Pendapatan</option> {/* 4 */}
+                <option value="5">Harga Pokok Penjualan</option> {/* 5 */}
+                <option value="6">Beban</option> {/* 6 */}
+                <option value="7">Pendapatan Lainnya</option> {/* 7 */}
+                <option value="8">Beban Lainnya</option> {/* 8 */}
               </select>
             </div>
             {error && <div className="text-red-500 text-sm">{error}</div>}

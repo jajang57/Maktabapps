@@ -159,12 +159,7 @@ export default function MasterProject() {
   const fetchProjects = async () => {
     try {
       setIsLoading(true);
-      const response = await api.get('/master-project');
-      console.log('=== BACKEND RESPONSE DEBUG ===');
-      console.log('Full response:', response);
-      console.log('Response data:', response.data);
-      console.log('Projects array:', response.data.data);
-      
+      const response = await api.get('/master-project');      
       // Debug each project structure
       if (response.data.data && response.data.data.length > 0) {
         response.data.data.forEach((project, index) => {

@@ -19,6 +19,7 @@ import JurnalUmum from "./pages/transaksi/JurnalUmum";
 import Pembelian from "./pages/transaksi/Pembelian";
 import Penjualan from "./pages/transaksi/Penjualan";
 import InputTransaksiPage from "./pages/transaksi/InputTransaksiPage";
+import TransaksiGL from "./pages/transaksi/TransaksiGL";
 
 export default function App() {
   return (
@@ -131,6 +132,13 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <InputTransaksiPage />
+              </Layout>
+            </ProtectedRoute>
+          } />
+          <Route path="/transaksi/gl" element={
+            <ProtectedRoute>
+              <Layout>
+                <TransaksiGL />
               </Layout>
             </ProtectedRoute>
           } />

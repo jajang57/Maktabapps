@@ -11,34 +11,37 @@ export default function InputTransaksiPage() {
   const formRef = useRef();
 
   // ✅ ADD: Debug state changes
-  useEffect(() => {
-    console.log("🔍 InputTransaksiPage - selectedCOA changed:", selectedCOA);
-    console.log("🔍 InputTransaksiPage - selectedCOA type:", typeof selectedCOA);
-    console.log("🔍 InputTransaksiPage - selectedCOA truthy:", !!selectedCOA);
-  }, [selectedCOA]);
+  useEffect(() => { }, [selectedCOA]);
 
   useEffect(() => {
-    console.log("🔍 InputTransaksiPage - refreshTable changed:", refreshTable);
+   
   }, [refreshTable]);
 
   // ✅ ENHANCED: handleAfterSubmit dengan data context
-  const handleAfterSubmit = useCallback((coaId, transaksiData = null) => {
-    console.log("🔍 InputTransaksiPage - handleAfterSubmit called");
-    console.log("🔍 Latest transaksi data:", transaksiData);
+  const handleAfterSubmit = useCallback((coaId, transaksiData = null, deletedData = null) => {
+    console.log("🔍 TEMP DEBUG - handleAfterSubmit called with:", { coaId, transaksiData, deletedData });
     
-    // ✅ Store data transaksi yang baru disimpan
-    if (transaksiData) {
+    if (deletedData) {
+      // Handle delete case
+      console.log("🗑️ Transaction deleted:", deletedData);
+      // Tidak perlu set latestTransaksiData untuk delete
+      setLatestTransaksiData(null);
+      setShouldJumpToLatest(false);
+    } else if (transaksiData) {
+      // Handle create/update case
+      console.log("💾 Transaction saved:", transaksiData);
+      console.log("🔍 TEMP DEBUG - Setting latestTransaksiData to:", transaksiData);
       setLatestTransaksiData(transaksiData);
+      setShouldJumpToLatest(true);
     }
     
-    // ✅ Set flag untuk jump ke data terbaru
-    setShouldJumpToLatest(true);
-    
-    // ✅ Trigger refresh data
+    // Trigger refresh table
+    console.log("🔄 TEMP DEBUG - Triggering table refresh, current refreshTable:", refreshTable);
     setRefreshTable((r) => {
-      console.log("🔍 InputTransaksiPage - refreshTable toggle:", !r);
+      console.log("🔄 TEMP DEBUG - refreshTable changing from", r, "to", !r);
       return !r;
     });
+    
   }, []);
 
   // ✅ ADD: Reset jump flag setelah table handle
@@ -48,44 +51,28 @@ export default function InputTransaksiPage() {
   }, []);
 
   const handleCOAChange = useCallback((coaId) => {
-    console.log("🔍 InputTransaksiPage - handleCOAChange called with:", coaId);
-    console.log("🔍 InputTransaksiPage - coaId type:", typeof coaId);
-    console.log("🔍 InputTransaksiPage - coaId value:", coaId);
+ 
     
     // ✅ ENHANCED: Validate coaId before setting
     if (coaId && coaId !== "") {
-      console.log("🔍 InputTransaksiPage - Setting selectedCOA to:", coaId);
+      
       setSelectedCOA(coaId);
     } else {
-      console.log("🔍 InputTransaksiPage - Clearing selectedCOA (empty value)");
+      
       setSelectedCOA("");
     }
   }, []);
 
   const handleRowDoubleClick = useCallback((transaksi) => {
-    console.log("🔍 InputTransaksiPage - handleRowDoubleClick called with:", transaksi);
-    console.log("🔍 InputTransaksiPage - formRef.current:", formRef.current);
-    
     if (formRef.current && formRef.current.handleEdit) {
-      console.log("🔍 InputTransaksiPage - Calling formRef.current.handleEdit");
-      formRef.current.handleEdit(transaksi);
-    } else {
-      console.error("❌ InputTransaksiPage - formRef.current.handleEdit is not available");
-      console.error("❌ InputTransaksiPage - formRef.current available methods:", formRef.current ? Object.keys(formRef.current) : "No ref");
-    }
+       formRef.current.handleEdit(transaksi);
+    } else { }
   }, []);
 
   // ✅ ADD: Component mount debug
   useEffect(() => {
-    console.log("🎯 InputTransaksiPage mounted");
-    console.log("🔍 Initial state:", {
-      selectedCOA,
-      refreshTable,
-      formRef: formRef.current
-    });
-
+   
     return () => {
-      console.log("🎯 InputTransaksiPage unmounted");
     };
   }, []);
 

@@ -66,89 +66,24 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
 
   // ✅ FIXED: Fetch master project data
   useEffect(() => {
-    console.log("🔍 Starting to fetch master project data...");
-    
     api.get("/master-project")
       .then(res => {
-        console.log("✅ Master project API RAW response:", res);
-        console.log("📊 Response data structure:", {
-          status: res.status,
-          statusText: res.statusText,
-          headers: res.headers,
-          data: res.data,
-          dataType: typeof res.data,
-          dataStringified: JSON.stringify(res.data, null, 2),
-          hasData: res.data ? 'Yes' : 'No',
-          hasDataArray: res.data?.data ? 'Yes' : 'No',
-          dataLength: res.data?.data?.length || 0
-        });
-        
-        // Check structure lebih mendalam
-        if (res.data) {
-          console.log("🔬 Deep structure analysis:");
-          console.log("res.data keys:", Object.keys(res.data));
-          
-          if (res.data.data) {
-            console.log("res.data.data type:", typeof res.data.data);
-            console.log("res.data.data is array:", Array.isArray(res.data.data));
-            console.log("res.data.data length:", res.data.data.length);
-            
-            if (Array.isArray(res.data.data) && res.data.data.length > 0) {
-              console.log("📋 First project sample:", res.data.data[0]);
-              console.log("📋 First project keys:", Object.keys(res.data.data[0]));
-              
-              // Check each project item
-              res.data.data.forEach((project, index) => {
-                console.log(`🔍 Detailed Project ${index}:`, {
-                  raw: project,
-                  ID: project.ID,
-                  id: project.id,
-                  kode_project: project.kode_project,
-                  nama_project: project.nama_project,
-                  created_at: project.created_at,
-                  updated_at: project.updated_at,
-                  allFields: Object.keys(project),
-                  fieldTypes: Object.keys(project).reduce((acc, key) => {
-                    acc[key] = typeof project[key];
-                    return acc;
-                  }, {})
-                });
-              });
-            }
-          }
-        }
-        
         const projectData = res.data.data || [];
         setProjectList(projectData);
-        console.log("💾 Set projectList to:", projectData);
-        console.log("💾 projectList type:", typeof projectData);
-        console.log("💾 projectList is array:", Array.isArray(projectData));
       })
       .catch(err => {
-        console.error("❌ Error fetching master project:", err);
-        console.error("❌ Error details:", {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status,
-          statusText: err.response?.statusText,
-          stack: err.stack
-        });
+        console.error("Error fetching master project:", err);
         setProjectList([]);
       });
   }, []);
 
   // ✅ FIXED: Debug projectList changes
   useEffect(() => {
-    console.log("🔄 ProjectList state updated:", projectList);
-    console.log("ProjectList length:", projectList.length);
-    console.log("ProjectList is array?", Array.isArray(projectList));
+    // Debug: projectList updated
   }, [projectList]);
 
   // Fungsi untuk handle double click row (untuk edit)
   const handleRowDoubleClick = useCallback((transaksi) => {
-    console.log("handleRowDoubleClick called with:", transaksi);
-    console.log("Available COA List:", coaList);
-    
     setIsEditMode(true);
     setSelectedTransaksiId(transaksi.id);
     
@@ -166,13 +101,9 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     
     if (coaByKode) {
       coaAkunBankValue = String(coaByKode.id);
-      console.log("Found COA by kode:", coaByKode);
     } else if (coaById) {
       coaAkunBankValue = String(coaById.id);
-      console.log("Found COA by ID:", coaById);
     }
-    
-    console.log("Setting coaAkunBank to:", coaAkunBankValue);
     
     const newFormData = {
       noTransaksi: transaksi.noTransaksi || "",
@@ -186,7 +117,6 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
       kredit: transaksi.kredit || ""
     };
     
-    console.log("Setting form data:", newFormData);
     setForm(newFormData);
     
     // Set nilai yang diformat untuk debit dan kredit
@@ -221,11 +151,35 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     }
   }, [onCOAChange]);
 
+  // ✅ TAMBAHKAN: Reset khusus untuk delete (tidak reset COA Akun Bank)
+  const handleResetAfterDelete = useCallback(() => {
+    const currentCoaAkunBank = form.coaAkunBank; // Simpan COA yang sedang dipilih
+    
+    setForm({
+      coaAkunBank: currentCoaAkunBank, // ✅ JANGAN RESET COA AKUN BANK
+      noTransaksi: "",
+      tanggal: getTodayLocal(),
+      akunTransaksi: "",
+      deskripsi: "",
+      projectNo: "",
+      projectName: "",
+      debit: "",
+      kredit: ""
+    });
+    setFormattedDebit('');
+    setFormattedKredit('');
+    setIsEditMode(false);
+    setSelectedTransaksiId(null);
+    
+    // ✅ JANGAN PANGGIL onCOAChange("") supaya filter tidak reset
+  }, [form.coaAkunBank]);
+
   // Expose handleEdit function to parent via ref
   useImperativeHandle(ref, () => ({
     handleEdit: handleRowDoubleClick,
-    resetForm: handleResetForm
-  }), [handleRowDoubleClick, handleResetForm]);
+    resetForm: handleResetForm,
+    resetAfterDelete: handleResetAfterDelete // ✅ TAMBAHKAN INI
+  }), [handleRowDoubleClick, handleResetForm, handleResetAfterDelete]);
 
   // ✅ FIXED: Fetch COA Kas Bank data
   useEffect(() => {
@@ -273,37 +227,25 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
 
   // Debug: Log form changes
   useEffect(() => {
-    console.log("Form state changed:", form);
+    // Form state changed
   }, [form]);
 
   // Debug: Log COA list changes
   useEffect(() => {
-    console.log("COA List updated:", coaList);
+    // COA List updated
   }, [coaList]);
 
   // Fungsi untuk generate nomor transaksi otomatis
   const generateNoTransaksi = async () => {
     if (!form.coaAkunBank || !form.tanggal || !user?.id) {
-      console.log("Generate nomor transaksi cancelled - missing data:", {
-        coaAkunBank: form.coaAkunBank,
-        tanggal: form.tanggal,
-        userId: user?.id
-      });
       return;
     }
 
     // Cari kode bank dari ID yang dipilih
     const selectedCOA = coaList.find(coa => String(coa.id) === String(form.coaAkunBank));
     if (!selectedCOA || !selectedCOA.kode) {
-      console.log("COA Bank tidak ditemukan atau tidak memiliki kode:", selectedCOA);
       return;
     }
-
-    console.log("Generating nomor transaksi with:", {
-      kodeBank: selectedCOA.kode,
-      userID: user.id,
-      tanggal: form.tanggal
-    });
 
     setIsGeneratingNoTransaksi(true);
     try {
@@ -314,8 +256,6 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
           tanggal: form.tanggal
         }
       });
-      
-      console.log("Generated nomor transaksi:", response.data.noTransaksi);
       
       setForm(prev => ({
         ...prev,
@@ -349,12 +289,30 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     }
 
     try {
-      await api.delete(`/input-transaksi/${selectedTransaksiId}`);
-      alert("Transaksi berhasil dihapus!");
-      handleResetForm();
-      if (afterSubmit) afterSubmit(form.coaAkunBank);
+    // Simpan data untuk rollback jika diperlukan
+    const deletedTransaksiData = {
+      id: selectedTransaksiId,
+      noTransaksi: form.noTransaksi,
+      coaAkunBank: form.coaAkunBank
+    };
+
+    // Kirim request delete
+    await api.delete(`/input-transaksi/${selectedTransaksiId}`);
+    
+    // Reset form terlebih dahulu
+    handleResetAfterDelete();
+    
+    // Notify parent dengan data yang dihapus untuk update table
+    if (afterSubmit) {
+      afterSubmit(form.coaAkunBank, null, deletedTransaksiData); // ✅ Tambah parameter ke-3
+    }
+    
+    alert("Transaksi berhasil dihapus!");
+    
     } catch (err) {
-      alert("Gagal menghapus transaksi");
+      console.error("Error deleting transaksi:", err);
+      const errorMsg = err.response?.data?.message || err.message || "Gagal menghapus transaksi";
+      alert(`Gagal menghapus transaksi: ${errorMsg}`);
     }
   };
 
@@ -412,17 +370,10 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     
     // ✅ ENHANCED: Debug COA change
     if (name === "coaAkunBank") {
-      console.log("🔍 InputTransaksiForm - COA changed to:", value);
-      console.log("🔍 InputTransaksiForm - onCOAChange prop:", onCOAChange);
-      
       const selectedCOA = coaList.find(coa => String(coa.id) === String(value));
-      console.log("🔍 InputTransaksiForm - Selected COA object:", selectedCOA);
       
       if (onCOAChange) {
-        console.log("🔍 InputTransaksiForm - Calling onCOAChange with ID:", value);
         onCOAChange(value);
-      } else {
-        console.error("❌ InputTransaksiForm - onCOAChange prop not provided");
       }
     }
     
@@ -439,14 +390,11 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     
     // ✅ FIXED: Handle debit input
     if (name === "debit") {
-      console.log("🔍 Debit input changed to:", value);
-      
       // Allow user to type freely
       setFormattedDebit(value);
       
       // Parse for internal storage
       const numericValue = parseFormattedNumber(value);
-      console.log("🔍 Parsed debit value:", numericValue);
       
       setForm({ ...form, debit: numericValue });
       return;
@@ -454,14 +402,11 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     
     // ✅ FIXED: Handle kredit input
     if (name === "kredit") {
-      console.log("🔍 Kredit input changed to:", value);
-      
       // Allow user to type freely
       setFormattedKredit(value);
       
       // Parse for internal storage
       const numericValue = parseFormattedNumber(value);
-      console.log("🔍 Parsed kredit value:", numericValue);
       
       setForm({ ...form, kredit: numericValue });
       return;
@@ -475,7 +420,6 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
   const handleDebitBlur = () => {
     if (formattedDebit) {
       const formatted = formatNumberWithCommas(formattedDebit);
-      console.log("🔍 Formatting debit on blur:", formattedDebit, "->", formatted);
       setFormattedDebit(formatted);
     }
   };
@@ -483,7 +427,6 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
   const handleKreditBlur = () => {
     if (formattedKredit) {
       const formatted = formatNumberWithCommas(formattedKredit);
-      console.log("🔍 Formatting kredit on blur:", formattedKredit, "->", formatted);
       setFormattedKredit(formatted);
     }
   };
@@ -491,14 +434,12 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
   // ✅ FIXED: Enhanced focus handlers untuk raw input
   const handleDebitFocus = () => {
     if (form.debit) {
-      console.log("🔍 Debit focus - showing raw value:", form.debit);
       setFormattedDebit(form.debit.toString());
     }
   };
 
   const handleKreditFocus = () => {
     if (form.kredit) {
-      console.log("🔍 Kredit focus - showing raw value:", form.kredit);
       setFormattedKredit(form.kredit.toString());
     }
   };
@@ -525,40 +466,39 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
         kredit: form.kredit ? parseFloat(form.kredit) : 0,
       };
       
+      console.log("🔍 TEMP DEBUG - Data yang akan dikirim ke backend:", dataToSend);
+      
       if (isEditMode && selectedTransaksiId) {
         // Mode Edit - tidak ada transaksi ganda saat edit
-        await api.put(`/input-transaksi/${selectedTransaksiId}`, dataToSend);
+        console.log("🔍 TEMP DEBUG - Melakukan PUT request ke:", `/input-transaksi/${selectedTransaksiId}`);
+        const response = await api.put(`/input-transaksi/${selectedTransaksiId}`, dataToSend);
+        console.log("🔍 TEMP DEBUG - Backend response setelah PUT:", response.data);
         alert("Transaksi berhasil diupdate!");
         
         // ✅ ENHANCED: Pass updated transaksi data
         if (afterSubmit) {
-          afterSubmit(form.coaAkunBank, {
+          afterSubmit(coaBankKode, {
             id: selectedTransaksiId,
             tanggal: form.tanggal,
             noTransaksi: form.noTransaksi,
-            coaAkunBank: form.coaAkunBank,
+            coaAkunBank: coaBankKode,
             akunTransaksi: form.akunTransaksi,
-            debit: form.debit,
-            kredit: form.kredit,
+            debit: form.debit ? parseFloat(form.debit) : 0,
+            kredit: form.kredit ? parseFloat(form.kredit) : 0,
             deskripsi: form.deskripsi
           });
         }
         
-        handleResetForm();
+        handleResetAfterDelete();
       } else {
         // Mode Create
-        console.log("Checking kas & bank for akun transaksi:", form.akunTransaksi);
         const isKasBank = isAkunTransaksiKasBank(form.akunTransaksi);
-        console.log("Is akun transaksi kas & bank?", isKasBank);
         
         // Simpan transaksi pertama (normal)
         const response1 = await api.post("/input-transaksi", dataToSend);
-        console.log("Transaksi 1 berhasil:", response1.data);
         
         // Jika akun transaksi adalah kas & bank, buat transaksi kedua
         if (isKasBank) {
-          console.log("Creating second transaction (tukar)...");
-          
           // Cari data COA untuk akun transaksi
           const akunTransaksiCOA = masterCoaList.find(coa => String(coa.kode) === String(form.akunTransaksi));
           
@@ -587,10 +527,7 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               kredit: form.debit ? parseFloat(form.debit) : 0,  // Tukar
             };
             
-            console.log("Data transaksi tukar:", dataToSendTukar);
-            
             const response2 = await api.post("/input-transaksi", dataToSendTukar);
-            console.log("Transaksi 2 (tukar) berhasil:", response2.data);
             
             alert("2 Transaksi berhasil disimpan (normal + tukar)!");
           } else {
@@ -600,6 +537,13 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
           alert("Transaksi berhasil disimpan!");
         }
         
+        // Trigger refresh table & jump ke transaksi terbaru setelah create
+        if (afterSubmit && response1 && response1.data) {
+          afterSubmit(form.coaAkunBank, response1.data);
+        } else if (afterSubmit) {
+          afterSubmit(form.coaAkunBank);
+        }
+
         // Reset form
         setForm({
           noTransaksi: "",
@@ -612,27 +556,19 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
           debit: "",
           kredit: ""
         });
-        
+
         // Reset nilai format
         setFormattedDebit('');
         setFormattedKredit('');
-        
         // Generate nomor transaksi untuk transaksi berikutnya
         if (form.coaAkunBank && user?.id) {
           setTimeout(() => generateNoTransaksi(), 100);
         }
       }
       
-      if (afterSubmit) afterSubmit(form.coaAkunBank, {
-        tanggal: form.tanggal,
-        noTransaksi: form.noTransaksi,
-        id: Date.now(), // Temporary ID untuk tracking
-        coaAkunBank: form.coaAkunBank,
-        akunTransaksi: form.akunTransaksi,
-        debit: form.debit,
-        kredit: form.kredit,
-        deskripsi: form.deskripsi
-      }); // PANGGIL LANGSUNG SETELAH SIMPAN
+      // if (afterSubmit) afterSubmit(form.coaAkunBank, {
+      //   // ... HAPUS SELURUH BLOCK INI
+      // }); // PANGGIL LANGSUNG SETELAH SIMPAN
     } catch (err) {
       alert(isEditMode ? "Gagal update transaksi" : "Gagal simpan transaksi");
     }
@@ -640,45 +576,21 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
 
   // ✅ FIXED: Project dropdown rendering yang lebih aman dan debug yang lebih detail
   const renderProjectOptions = () => {
-    console.log("🎨 Rendering dropdown options...");
-    console.log("Current projectList:", projectList);
-    console.log("ProjectList length for dropdown:", projectList.length);
-    
     if (!Array.isArray(projectList)) {
-      console.log("⚠️ ProjectList is not an array!");
       return <option value="" disabled>Data tidak valid</option>;
     }
     
     if (projectList.length === 0) {
-      console.log("⚠️ ProjectList is empty!");
       return <option value="" disabled>Tidak ada data project</option>;
     }
     
     return projectList.map((project, index) => {
-      console.log(`Rendering option ${index}:`, project);
-      console.log(`Project ${index} detailed check:`, {
-        hasID: !!project.ID,
-        hasId: !!project.id,
-        hasKodeProject: !!project.kode_project,
-        hasNamaProject: !!project.nama_project,
-        IDValue: project.ID,
-        idValue: project.id,
-        kodeProjectValue: project.kode_project,
-        namaProjectValue: project.nama_project,
-        allKeys: Object.keys(project)
-      });
-      
       // ✅ FIXED: Check both uppercase and lowercase ID
       const projectId = project.ID || project.id;
       const projectKode = project.kode_project;
       const projectNama = project.nama_project;
       
       if (!projectId || !projectKode) {
-        console.log(`⚠️ Project ${index} missing required fields:`, {
-          ID: projectId,
-          kode_project: projectKode,
-          nama_project: projectNama
-        });
         return (
           <option key={`missing-${index}`} value="" disabled>
             Data project tidak lengkap (ID: {projectId}, Kode: {projectKode})
@@ -686,7 +598,6 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
         );
       }
       
-      console.log(`✅ Rendering valid option ${index}: ${projectKode} - ${projectNama}`);
       return (
         <option key={projectId} value={projectKode}>
           {projectKode} - {projectNama || 'Nama tidak tersedia'}
@@ -909,9 +820,9 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               <option value="">Pilih Project</option>
               {renderProjectOptions()}
             </select>
-            {/* ✅ ADD: Debug info di bawah dropdown */}
+            {/* Debug info di bawah dropdown */}
             <div className="text-xs text-gray-500 mt-1">
-              Debug: {projectList.length} projects loaded
+              Projects loaded: {projectList.length}
             </div>
           </div>
           <div>

@@ -30,22 +30,18 @@ export default function InputTransaksiTable({
 
   const itemsPerPage = 10;
   
-  // ✅ DEBUG: State changes
+  // State changes
   useEffect(() => {
-    console.log("🔍 InputTransaksiTable - Data state:", data);
-    console.log("🔍 InputTransaksiTable - Data length:", data.length);
-    console.log("🔍 InputTransaksiTable - selectedCOA:", selectedCOA);
+    // Data state updated
   }, [data, selectedCOA]);
 
   // ✅ FETCH: COA list
   useEffect(() => {
     api.get("/coa-kas-bank")
       .then(res => {
-        console.log("✅ COA list for table:", res.data);
         setCoaList(res.data || []);
       })
       .catch(err => {
-        console.error("❌ Error fetching COA list for table:", err);
         setCoaList([]);
       });
   }, []);
@@ -54,52 +50,35 @@ export default function InputTransaksiTable({
   useEffect(() => {
     api.get("/master-coa")
       .then(res => {
-        console.log("✅ Master COA list for table:", res.data);
         setMasterCoaList(res.data || []);
       })
       .catch(err => {
-        console.error("❌ Error fetching master COA list for table:", err);
         setMasterCoaList([]);
       });
   }, []);
 
   // ✅ FETCH: Project list
   useEffect(() => {
-    console.log("🔍 Fetching project list for table...");
     api.get("/master-project")
       .then(res => {
-        console.log("✅ Project list for table:", res.data);
         setProjectList(res.data.data || []);
       })
       .catch(err => {
-        console.error("❌ Error fetching project list for table:", err);
         setProjectList([]);
       });
   }, []);
 
-  // ✅ DEBUG: selectedCOA changes
+  // selectedCOA changes
   useEffect(() => {
-    console.log("🔍 InputTransaksiTable - selectedCOA changed:", selectedCOA);
-    console.log("🔍 InputTransaksiTable - selectedCOA type:", typeof selectedCOA);
-    console.log("🔍 InputTransaksiTable - selectedCOA truthy:", !!selectedCOA);
-    
-    if (selectedCOA && coaList.length > 0) {
-      const foundCOAById = coaList.find(coa => String(coa.id) === String(selectedCOA));
-      const foundCOAByKode = coaList.find(coa => String(coa.kode) === String(selectedCOA));
-      
-      console.log("🔍 InputTransaksiTable - COA matching:", {
-        selectedCOA,
-        foundById: foundCOAById,
-        foundByKode: foundCOAByKode,
-        coaListSample: coaList.slice(0, 2)
-      });
-    }
+    // selectedCOA updated
   }, [selectedCOA]);
 
   // ✅ FIXED: Single useEffect untuk fetch transaksi data
   useEffect(() => {
+    //
+    
     if (!selectedCOA) {
-      console.log("⚠️ No selectedCOA, clearing data");
+      //
       setData([]);
       return;
     }
@@ -111,78 +90,44 @@ export default function InputTransaksiTable({
     const fetchTransaksiData = async () => {
       try {
         let queryParam = selectedCOA;
-        
         if (coaList.length > 0) {
           const coaById = coaList.find(coa => String(coa.id) === String(selectedCOA));
           if (coaById) {
             queryParam = coaById.kode;
-            console.log("🔍 Converting selectedCOA ID to kode:", selectedCOA, "->", queryParam);
-          } else {
-            console.warn("⚠️ selectedCOA ID not found in coaList:", selectedCOA);
           }
         } else {
-          console.log("🔍 coaList not loaded, attempting to fetch...");
           try {
             const coaRes = await api.get("/coa-kas-bank");
             const tempCoaList = coaRes.data || [];
             const coaById = tempCoaList.find(coa => String(coa.id) === String(selectedCOA));
             if (coaById) {
               queryParam = coaById.kode;
-              console.log("🔍 Fetched coaList and converted ID to kode:", selectedCOA, "->", queryParam);
             }
           } catch (err) {
-            console.error("❌ Failed to fetch coaList:", err);
+            //
           }
         }
-        
-        console.log("🔍 Final queryParam for API:", queryParam);
-        console.log("🔍 API URL will be:", `/input-transaksi?coaAkunBank=${queryParam}`);
-        
         const res = await api.get(`/input-transaksi?coaAkunBank=${queryParam}`);
-        
-        console.log("✅ Raw API response for transaksi:", res);
-        console.log("📊 Response structure:", {
-          status: res.status,
-          statusText: res.statusText,
-          data: res.data,
-          dataType: typeof res.data,
-          dataLength: res.data?.length || 0,
-          firstItem: res.data?.[0] || null
-        });
-        
         if (Array.isArray(res.data)) {
-          console.log("✅ Setting data:", res.data);
           setData(res.data);
         } else if (res.data?.data && Array.isArray(res.data.data)) {
-          console.log("✅ Setting data from nested structure:", res.data.data);
           setData(res.data.data);
         } else {
-          console.log("⚠️ Unexpected data structure, setting empty array");
           setData([]);
         }
       } catch (err) {
-        console.error("❌ Error fetching transaksi data:", err);
-        console.error("❌ Error details:", {
-          message: err.message,
-          response: err.response?.data,
-          status: err.response?.status,
-          statusText: err.response?.statusText,
-          url: err.config?.url
-        });
         setData([]);
       }
     };
 
     return () => clearTimeout(fetchWithDelay);
-  }, [selectedCOA, refresh, localRefresh]);
+  }, [selectedCOA, refresh, localRefresh, coaList.length]); // ✅ ADD: coaList.length dependency
 
   // ✅ TRIGGER: Local refresh when coaList loads
   useEffect(() => {
     if (selectedCOA && coaList.length > 0 && data.length === 0) {
-      console.log("🔍 coaList loaded, checking if we need to refresh data");
       
       const timeoutId = setTimeout(() => {
-        console.log("🔍 Triggering localRefresh because coaList just loaded");
         setLocalRefresh(prev => !prev);
       }, 200);
       
@@ -255,7 +200,6 @@ export default function InputTransaksiTable({
 
   // ✅ DATA PROCESSING
   const { filteredData, sortedFiltered } = React.useMemo(() => {
-    console.log("🔍 Processing data - Raw:", data.length, "Search:", search);
     
     // Step 1: Filter data
     const filtered = data.filter(row => {
@@ -284,8 +228,6 @@ export default function InputTransaksiTable({
       // Secondary sort: by ID (ascending - oldest first)
       return (a.id || 0) - (b.id || 0);
     });
-
-    console.log("🔍 Data processed - Filtered:", filtered.length, "Sorted:", sorted.length);
     
     return {
       filteredData: filtered,
@@ -296,7 +238,6 @@ export default function InputTransaksiTable({
   // ✅ ENHANCED: Smart auto-jump using the same filtered data
   useEffect(() => {
     if (shouldJumpToLatest && latestTransaksiData && data.length > 0) {
-      console.log("🔍 Starting smart jump to latest data:", latestTransaksiData);
       
       // ✅ Use the same sortedFiltered data (no duplicate processing)
       const targetIndex = findTargetTransaksiIndex(sortedFiltered, latestTransaksiData);
@@ -304,32 +245,20 @@ export default function InputTransaksiTable({
       if (targetIndex !== -1) {
         const targetPage = Math.ceil((targetIndex + 1) / itemsPerPage);
         
-        console.log("🎯 Found target transaksi:", {
-          targetIndex: targetIndex,
-          targetPage: targetPage,
-          currentPage: page,
-          totalItems: sortedFiltered.length,
-          itemsPerPage: itemsPerPage,
-          targetTransaksi: sortedFiltered[targetIndex]
-        });
-        
         // Jump to target page
         if (targetPage !== page) {
-          console.log(`🔍 Jumping from page ${page} to page ${targetPage}`);
           setPage(targetPage);
         }
         
         // Clear search to ensure visibility
         if (search) {
-          console.log("🔍 Clearing search filter to show all data");
           setSearch("");
         }
       } else {
-        console.warn("⚠️ Target transaksi not found in sorted data");
+        //
         // Fallback: jump to last page
         const totalPages = Math.ceil(sortedFiltered.length / itemsPerPage);
         if (totalPages > 0) {
-          console.log("🔍 Fallback: jumping to last page", totalPages);
           setPage(totalPages);
         }
       }
@@ -751,12 +680,8 @@ export default function InputTransaksiTable({
                   key={row.id} 
                   className="hover:bg-indigo-50 cursor-pointer transition-colors"
                   onDoubleClick={() => {
-                    console.log("Row double clicked:", row);
-                    console.log("onRowDoubleClick handler:", onRowDoubleClick);
                     if (onRowDoubleClick) {
                       onRowDoubleClick(row);
-                    } else {
-                      console.log("No onRowDoubleClick handler provided");
                     }
                   }}
                   title="Double-click untuk edit transaksi"

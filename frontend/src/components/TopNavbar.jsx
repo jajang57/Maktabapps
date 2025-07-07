@@ -67,6 +67,10 @@ export default function TopNavbar() {
         { name: "Cash Bank", to: "/transaksi/cash-bank" },
         { name: "Pembelian", to: "/transaksi/pembelian" },
         { name: "Penjualan", to: "/transaksi/penjualan" },
+        {
+          name: "GL",
+          to: "/transaksi/gl"
+        },
       ],
     },
     { name: "Laporan", to: "/laporan" },
