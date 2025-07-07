@@ -47,8 +47,11 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	db.AutoMigrate(&models.Jurnal{}, &models.JurnalDetail{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{})
+	err = db.AutoMigrate(&models.Jurnal{}, &models.JurnalDetail{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{})
 
+	if err != nil {
+		panic(fmt.Sprintf("AutoMigrate error: %v", err))
+	}
 	// Data migration untuk kode category yang kosong
 	migrateKodeCategory(db)
 
@@ -80,7 +83,6 @@ func main() {
 	// Public routes (tidak perlu authentication)
 	r.POST("/api/register", handlers.Register(db))
 	r.POST("/api/login", handlers.Login(db))
-
 	// Protected routes (perlu authentication)
 	api := r.Group("/api")
 	api.Use(handlers.AuthMiddleware())
@@ -113,9 +115,15 @@ func main() {
 		{
 			masterProjectRoutes.GET("", handlers.GetMasterProjects(db))
 			masterProjectRoutes.POST("", handlers.CreateMasterProject(db))
-			masterProjectRoutes.PUT("/:id", handlers.UpdateMasterProject(db))
-			masterProjectRoutes.DELETE("/:id", handlers.DeleteMasterProject(db))
+			masterProjectRoutes.PUT(":id", handlers.UpdateMasterProject(db))
+			masterProjectRoutes.DELETE(":id", handlers.DeleteMasterProject(db))
 		}
+
+		// GL Routes
+		api.GET("/gl", handlers.GetGLs(db))
+		api.POST("/gl", handlers.CreateGL(db))
+		api.PUT("/gl/:id", handlers.UpdateGL(db))
+		api.DELETE("/gl/:id", handlers.DeleteGL(db))
 	}
 
 	r.Run("0.0.0.0:8080")
