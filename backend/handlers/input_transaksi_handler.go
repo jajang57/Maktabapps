@@ -140,6 +140,25 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 			tipeAkun := coa.MasterCategoryCOA.TipeAkun
 			fmt.Printf("[DEBUG] PostInputTransaksi: tipeAkun untuk akun %s adalah %s\n", input.AkunTransaksi, tipeAkun)
 			if tipeAkun == "1" {
+
+				var coaLawan models.MasterCOA
+				isKasBank := false
+				if err := db.Preload("MasterCategoryCOA").Where("kode = ?", input.AkunTransaksi).First(&coaLawan).Error; err == nil {
+					isKasBank = coaLawan.MasterCategoryCOA.IsKasBank
+				}
+
+				if isKasBank {
+					var transaksiLawan models.InputTransaksi
+					// Cari transaksi lain yang nomor transaksinya sama dengan deskripsi transaksi ini
+					if err := db.Where("no_transaksi = ?", input.Deskripsi).First(&transaksiLawan).Error; err == nil {
+						// Jika ditemukan, artinya ini transaksi tukar lawan, JANGAN insert ke GL
+						c.JSON(http.StatusOK, input)
+						return
+					}
+				}
+
+				fmt.Printf("[DEBUG] PostInputTransaksi: isKasBank untuk akun %s adalah %t  %b %t \n", input.AkunTransaksi, isKasBank, input.Deskripsi, input.NoTransaksi)
+
 				// Transaksi normal: Akun Transaksi di Debit, COA Akun Bank di Kredit
 				if input.Debit > 0 {
 					gl1 := models.GL{
@@ -158,7 +177,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
-						AkunTransaksi:  input.AkunTransaksi,
+						AkunTransaksi:  input.CoaAkunBank,
 						Deskripsi:      input.Deskripsi,
 						Debit:          0,
 						Kredit:         input.Debit,
@@ -171,6 +190,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 				}
 				// Transaksi tukar: COA Akun Bank di Debit, Akun Transaksi di Kredit
 				if input.Kredit > 0 {
+
 					gl1 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
@@ -187,7 +207,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
-						AkunTransaksi:  input.AkunTransaksi,
+						AkunTransaksi:  input.CoaAkunBank,
 						Deskripsi:      input.Deskripsi,
 						Debit:          0,
 						Kredit:         input.Kredit,
@@ -197,6 +217,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl2)
+
 				}
 			} else if tipeAkun == "2" || tipeAkun == "3" || tipeAkun == "4" {
 				// Untuk Liability (2) dan Equity (3):
@@ -207,9 +228,9 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						COAAkunBank:    input.CoaAkunBank,
 						AkunTransaksi:  input.AkunTransaksi,
 						Deskripsi:      input.Deskripsi,
-						Debit:          0,
-						Kredit:         input.Kredit,
-						Balance:        -input.Kredit,
+						Debit:          input.Kredit,
+						Kredit:         0,
+						Balance:        input.Kredit,
 						NomorTransaksi: input.NoTransaksi,
 						ProjectNo:      input.ProjectNo,
 						ProjectName:    input.ProjectName,
@@ -218,11 +239,11 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
-						AkunTransaksi:  input.AkunTransaksi,
+						AkunTransaksi:  input.CoaAkunBank,
 						Deskripsi:      input.Deskripsi,
-						Debit:          input.Kredit,
-						Kredit:         0,
-						Balance:        input.Kredit,
+						Debit:          0,
+						Kredit:         input.Kredit,
+						Balance:        -input.Kredit,
 						NomorTransaksi: input.NoTransaksi,
 						ProjectNo:      input.ProjectNo,
 						ProjectName:    input.ProjectName,
@@ -234,7 +255,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 					gl1 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
-						AkunTransaksi:  input.AkunTransaksi,
+						AkunTransaksi:  input.CoaAkunBank,
 						Deskripsi:      input.Deskripsi,
 						Debit:          input.Debit,
 						Kredit:         0,
@@ -277,7 +298,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
-						AkunTransaksi:  input.AkunTransaksi,
+						AkunTransaksi:  input.CoaAkunBank,
 						Deskripsi:      input.Deskripsi,
 						Debit:          0,
 						Kredit:         input.Debit,
@@ -305,7 +326,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
-						AkunTransaksi:  input.AkunTransaksi,
+						AkunTransaksi:  input.CoaAkunBank,
 						Deskripsi:      input.Deskripsi,
 						Debit:          0,
 						Kredit:         input.Kredit,
@@ -355,6 +376,18 @@ func UpdateInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 				tipeAkun := coa.MasterCategoryCOA.TipeAkun
 				// Copy logic dari PostInputTransaksi
 				if tipeAkun == "1" {
+					var coaLawan models.MasterCOA
+					isKasBank := false
+					if err := db.Preload("MasterCategoryCOA").Where("kode = ?", updated.AkunTransaksi).First(&coaLawan).Error; err == nil {
+						isKasBank = coaLawan.MasterCategoryCOA.IsKasBank
+					}
+
+					if isKasBank && updated.Deskripsi == updated.NoTransaksi {
+						// Ini transaksi tukar lawan, JANGAN insert ke GL
+						c.JSON(http.StatusOK, updated)
+						return
+					}
+
 					if updated.Debit > 0 {
 						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Debit, Kredit: 0, Balance: updated.Debit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
 						db.Create(&gl1)
@@ -362,16 +395,18 @@ func UpdateInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						db.Create(&gl2)
 					}
 					if updated.Kredit > 0 {
+
 						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Kredit, Kredit: 0, Balance: updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
 						db.Create(&gl1)
-						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Kredit, Balance: -updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.CoaAkunBank, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Kredit, Balance: -updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
 						db.Create(&gl2)
+
 					}
 				} else if tipeAkun == "2" || tipeAkun == "3" || tipeAkun == "4" {
 					if updated.Kredit > 0 {
-						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Kredit, Balance: -updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Kredit, Kredit: 0, Balance: updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
 						db.Create(&gl1)
-						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Kredit, Kredit: 0, Balance: updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Kredit, Balance: -updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
 						db.Create(&gl2)
 					}
 					if updated.Debit > 0 {

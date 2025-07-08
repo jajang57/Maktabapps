@@ -1,9 +1,9 @@
-
-import { useState, useEffect, useRef } from "react";
-import DataTable from "react-data-table-component";
+import { useState, useEffect } from "react";
+import { DataGrid } from "@mui/x-data-grid";
 import api from "../../utils/api";
 import { FiPrinter } from "react-icons/fi";
 import { FaFileExcel } from "react-icons/fa";
+import { Box, Button, Typography } from "@mui/material";
 
 // Format tanggal ke dd-mm-yyyy
 function formatDateDMY(dateStr) {
@@ -21,13 +21,10 @@ function formatNumber(num) {
   return Number(num).toLocaleString();
 }
 
-
 export default function TransaksiGL() {
-  const [data, setData] = useState([]);
-  const [filterText, setFilterText] = useState("");
-  const [filteredData, setFilteredData] = useState([]);
+  const [rows, setRows] = useState([]);
   const [masterCoaList, setMasterCoaList] = useState([]);
-  const tableRef = useRef();
+  const [filterModel, setFilterModel] = useState({ items: [] });
 
   // Ambil master COA
   useEffect(() => {
@@ -37,64 +34,106 @@ export default function TransaksiGL() {
   }, []);
 
   // Helper mapping kode ke nama COA
-
-  // Format COA Akun Bank: kode - nama
   const getCoaBankDisplay = (kode) => {
     if (!kode) return '';
     const found = masterCoaList.find(coa => String(coa.kode) === String(kode));
     return found ? `${found.kode} - ${found.nama}` : kode;
   };
-  // Format Akun Transaksi: (kode) nama
   const getAkunTransaksiDisplay = (kode) => {
     if (!kode) return '';
     const found = masterCoaList.find(coa => String(coa.kode) === String(kode));
     return found ? `(${found.kode}) ${found.nama}` : kode;
   };
 
-  // Kolom DataTable
-  const columns = [
-    { name: "No", selector: (row, i) => i + 1, width: "60px", sortable: false },
-    { name: "Tanggal", selector: (row) => formatDateDMY(row.tanggal), sortable: true },
-    { name: "COA Akun Bank", selector: (row) => getCoaBankDisplay(row.coaAkunBank), sortable: true },
-    { name: "Akun Transaksi", selector: (row) => getAkunTransaksiDisplay(row.akunTransaksi), sortable: true },
-    { name: "Deskripsi", selector: (row) => row.deskripsi, sortable: true },
-    { name: "Debit", selector: (row) => formatNumber(row.debit), sortable: true, right: true },
-    { name: "Kredit", selector: (row) => formatNumber(row.kredit), sortable: true, right: true },
-    { name: "Balance", selector: (row) => formatNumber(row.balance), sortable: true, right: true },
-    { name: "Nomor Transaksi", selector: (row) => row.nomorTransaksi, sortable: true },
-    { name: "Project No", selector: (row) => row.projectNo, sortable: true },
-    { name: "Project Name", selector: (row) => row.projectName, sortable: true },
-  ];
-
-
+  // Ambil data GL
   useEffect(() => {
     api.get("/gl")
       .then((res) => {
-        setData(res.data);
-        setFilteredData(res.data);
+        const mapped = (res.data || [])
+          .filter(row => row && typeof row === "object")
+          .map((row, idx) => ({
+            id: idx + 1,
+            tanggal: row.tanggal || row.Tanggal || "",
+            coaAkunBank: row.coaAkunBank || row.coa_akun_bank || "",
+            akunTransaksi: row.akunTransaksi || row.akun_transaksi || "",
+            deskripsi: row.deskripsi || "",
+            debit: row.debit ?? "",
+            kredit: row.kredit ?? "",
+            balance: row.balance ?? "",
+            nomorTransaksi: row.nomorTransaksi || row.no_transaksi || "",
+            projectNo: row.projectNo || row.project_no || "",
+            projectName: row.projectName || row.project_name || "",
+          }));
+        console.log("GL mapped rows", mapped);
+        setRows(mapped);
       })
       .catch(() => {});
   }, []);
 
-  useEffect(() => {
-    setFilteredData(
-      data.filter(
-        (row) =>
-          (row.tanggal || "").toLowerCase().includes(filterText) ||
-          getCoaNamaOnly(row.coaAkunBank).toLowerCase().includes(filterText) ||
-          getCoaNamaOnly(row.akunTransaksi).toLowerCase().includes(filterText) ||
-          (row.deskripsi || "").toLowerCase().includes(filterText) ||
-          (row.nomorTransaksi || "").toLowerCase().includes(filterText) ||
-          (row.projectNo || "").toLowerCase().includes(filterText) ||
-          (row.projectName || "").toLowerCase().includes(filterText)
-      )
-    );
-  }, [filterText, data, masterCoaList]);
+  // Kolom DataGrid
+  const columns = [
+    { field: "id", headerName: "No", width: 60 },
+    { 
+      field: "tanggal", 
+      headerName: "Tanggal", 
+      width: 110, 
+      renderCell: (params) => formatDateDMY(params.value)
+    },
+    { 
+      field: "coaAkunBank", 
+      headerName: "COA Akun Bank", 
+      width: 170, 
+      renderCell: (params) => getCoaBankDisplay(params.value),
+      hide: true // sembunyikan kolom ini
+    },
+    { 
+      field: "akunTransaksi", 
+      headerName: "Akun Transaksi", 
+      width: 170, 
+      renderCell: (params) => getAkunTransaksiDisplay(params.value)
+    },
+    { 
+      field: "deskripsi", 
+      headerName: "Deskripsi", 
+      width: 600, // Lebar bisa diubah sesuai kebutuhan
+      getCellClassName: () => "wrap-text-cell"
+    },
+    { 
+      field: "debit", 
+      headerName: "Debit", 
+      width: 110, 
+      type: "number", 
+      renderCell: (params) => formatNumber(params.value)
+    },
+    { 
+      field: "kredit", 
+      headerName: "Kredit", 
+      width: 110, 
+      type: "number", 
+      renderCell: (params) => formatNumber(params.value)
+    },
+    { 
+      field: "balance", 
+      headerName: "Balance", 
+      width: 110, 
+      type: "number", 
+      renderCell: (params) => formatNumber(params.value),
+      hide: true // sembunyikan kolom ini
+    },
+    { field: "nomorTransaksi", headerName: "Nomor Transaksi", width: 180 },
+    { field: "projectNo", headerName: "Project No", width: 120 },
+    { field: "projectName", headerName: "Project Name", width: 160 },
+  ];
+
+  const [columnVisibilityModel, setColumnVisibilityModel] = useState({
+  coaAkunBank: false,
+  balance: false,
+});
 
   // Export to Excel
   const handleExportExcel = () => {
     import("xlsx").then((xlsx) => {
-      const ws = xlsx.utils.json_to_sheet(filteredData);
+      const ws = xlsx.utils.json_to_sheet(rows);
       const wb = xlsx.utils.book_new();
       xlsx.utils.book_append_sheet(wb, ws, "TransaksiGL");
       xlsx.writeFile(wb, "TransaksiGL.xlsx");
@@ -103,64 +142,59 @@ export default function TransaksiGL() {
 
   // Print Table
   const handlePrint = () => {
-    const printContent = tableRef.current.innerHTML;
-    const win = window.open("", "", "width=900,height=700");
-    win.document.write(`
-      <html><head><title>Print GL</title>
-      <style>
-        body { font-family: Arial; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #ccc; padding: 6px; }
-        th { background: #e0e7ff; }
-      </style>
-      </head><body>${printContent}</body></html>
-    `);
-    win.document.close();
-    win.print();
+    window.print();
   };
+  
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2 mb-2">
-        <h1 className="text-xl font-bold tracking-tight">General Ledger (GL)</h1>
-        <div className="flex gap-2">
-          <button
+    <Box sx={{ p: 2 }}>
+      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, alignItems: { md: "center" }, justifyContent: "space-between", gap: 2, mb: 2 }}>
+        <Typography variant="h6" fontWeight="bold">General Ledger (GL)</Typography>
+        <Box sx={{ display: "flex", gap: 1 }}>
+          <Button
             onClick={handlePrint}
-            className="flex items-center gap-1 px-3 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
+            variant="contained"
+            color="primary"
+            startIcon={<FiPrinter />}
           >
-            <FiPrinter /> Print
-          </button>
-          <button
+            Print
+          </Button>
+          <Button
             onClick={handleExportExcel}
-            className="flex items-center gap-1 px-3 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            variant="contained"
+            color="success"
+            startIcon={<FaFileExcel />}
           >
-            <FaFileExcel /> Excel
-          </button>
-        </div>
-      </div>
-      <div className="mb-2">
-        <input
-          type="text"
-          placeholder="Cari transaksi..."
-          className="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-          value={filterText}
-          onChange={(e) => setFilterText(e.target.value.toLowerCase())}
-        />
-      </div>
-      <div ref={tableRef} className="bg-white rounded-xl shadow overflow-x-auto">
-        <DataTable
+            Excel
+          </Button>
+        </Box>
+      </Box>
+      <div style={{ height: "100%", width: "100%" }}>
+        <DataGrid
+          rows={rows}
           columns={columns}
-          data={filteredData}
-          pagination
-          highlightOnHover
-          responsive
-          striped
-          persistTableHead
-          customStyles={{
-            headRow: { style: { background: "#e0e7ff" } },
+          filterModel={filterModel}
+          onFilterModelChange={setFilterModel}
+          columnVisibilityModel={columnVisibilityModel}
+          onColumnVisibilityModelChange={setColumnVisibilityModel}
+          disableRowSelectionOnClick
+          sx={{
+            background: "#fff",
+            borderRadius: 2,
+            boxShadow: 2,
+            "& .MuiDataGrid-columnHeaders": { background: "#e0e7ff" },
+            "& .wrap-text-cell": {
+              whiteSpace: "normal",
+              wordBreak: "break-word",
+              lineHeight: 1.4,
+              display: "block",
+              overflowWrap: "break-word",
+            },
           }}
+          pagination={false} // hilangkan paging
+          hideFooterPagination // hilangkan footer paging
         />
       </div>
-    </div>
+    </Box>
   );
 }
