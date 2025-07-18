@@ -73,7 +73,14 @@ export default function TopNavbar() {
         },
       ],
     },
-    { name: "Laporan", to: "/laporan" },
+    {
+      name: "Laporan",
+      dropdown: [
+        { name: "Trial Balance", to: "/laporan/trial-balance" },
+        { name: "Buku Besar", to: "/laporan/buku-besar" },
+
+      ],
+    },
     { name: "Setting", to: "/setting" },
   ];
 

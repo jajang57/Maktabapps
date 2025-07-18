@@ -14,12 +14,14 @@ import MasterPembeli from "./pages/master-data/MasterPembeli";
 import MasterKaryawan from "./pages/master-data/MasterKaryawan";
 import MasterProject from "./pages/master-data/MasterProject";
 import Setting from "./pages/Setting";
+import TrialBalance from "./pages/laporan/TrialBalance";
+import BukuBesar from "./pages/laporan/BukuBesar";
 import Transaksi from "./pages/Transaksi";
 import JurnalUmum from "./pages/transaksi/JurnalUmum";
 import Pembelian from "./pages/transaksi/Pembelian";
 import Penjualan from "./pages/transaksi/Penjualan";
 import InputTransaksiPage from "./pages/transaksi/InputTransaksiPage";
-import TransaksiGL from "./pages/transaksi/TransaksiGL";
+import TransaksiGL from "./pages/transaksi/AgGridTransaksiGL";
 
 export default function App() {
   return (
@@ -139,6 +141,20 @@ export default function App() {
             <ProtectedRoute>
               <Layout>
                 <TransaksiGL />
+              </Layout>
+            </ProtectedRoute>
+          } />
+            <Route path="/laporan/trial-balance" element={
+            <ProtectedRoute>
+              <Layout>
+                <TrialBalance />
+              </Layout>
+            </ProtectedRoute>
+          } />
+            <Route path="/laporan/Buku-Besar" element={
+            <ProtectedRoute>
+              <Layout>
+                <BukuBesar />
               </Layout>
             </ProtectedRoute>
           } />

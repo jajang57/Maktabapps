@@ -174,6 +174,8 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl1)
+					syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
@@ -187,6 +189,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl2)
+					syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 				}
 				// Transaksi tukar: COA Akun Bank di Debit, Akun Transaksi di Kredit
 				if input.Kredit > 0 {
@@ -204,6 +207,8 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl1)
+					syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
@@ -217,6 +222,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl2)
+					syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 
 				}
 			} else if tipeAkun == "2" || tipeAkun == "3" || tipeAkun == "4" {
@@ -236,6 +242,8 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl1)
+					syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
@@ -249,6 +257,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl2)
+					syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 				}
 				if input.Debit > 0 {
 					// Akun Transaksi di Debit, COA Akun Bank di Kredit
@@ -265,6 +274,8 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl1)
+					syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
@@ -278,6 +289,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl2)
+					syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 				}
 			} else if tipeAkun == "5" || tipeAkun == "6" || tipeAkun == "7" || tipeAkun == "8" {
 				// Untuk tipe 5,6,7,8: Akun Transaksi di Debit, COA Akun Bank di Kredit
@@ -295,6 +307,8 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl1)
+					syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
@@ -308,6 +322,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl2)
+					syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 				}
 				if input.Kredit > 0 {
 					gl1 := models.GL{
@@ -323,6 +338,8 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl1)
+					syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
 					gl2 := models.GL{
 						Tanggal:        input.Tanggal,
 						COAAkunBank:    input.CoaAkunBank,
@@ -336,6 +353,7 @@ func PostInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 						ProjectName:    input.ProjectName,
 					}
 					db.Create(&gl2)
+					syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 				}
 			}
 			// Jika ingin handle tipe lain, tambahkan else if/else di sini
@@ -360,9 +378,14 @@ func UpdateInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 			return
 		}
 		// Hapus GL lama
-		db.Where("nomor_transaksi = ?", input.NoTransaksi).Delete(&models.GL{})
+		var gls []models.GL
+		db.Where("nomor_transaksi = ?", input.NoTransaksi).Find(&gls)
+		for _, gl := range gls {
+			syncGLSummary(db, gl.AkunTransaksi, gl.Tanggal, -gl.Debit, -gl.Kredit)
+		}
+		db.Unscoped().Where("nomor_transaksi = ?", input.NoTransaksi).Delete(&models.GL{})
 
-		// Update input transaksi
+		// Update input transaksi (jangan di-delete!)
 		if err := db.Model(&input).Select("no_transaksi", "coa_akun_bank", "tanggal", "akun_transaksi", "deskripsi", "project_no", "project_name", "debit", "kredit").Updates(req).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
@@ -389,44 +412,182 @@ func UpdateInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 					}
 
 					if updated.Debit > 0 {
-						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Debit, Kredit: 0, Balance: updated.Debit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl1 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.AkunTransaksi,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          updated.Debit,
+							Kredit:         0,
+							Balance:        updated.Debit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl1)
-						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Debit, Balance: -updated.Debit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
+						gl2 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.CoaAkunBank,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          0,
+							Kredit:         updated.Debit,
+							Balance:        -updated.Debit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl2)
+						syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 					}
 					if updated.Kredit > 0 {
 
-						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Kredit, Kredit: 0, Balance: updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl1 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.AkunTransaksi,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          updated.Kredit,
+							Kredit:         0,
+							Balance:        updated.Kredit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl1)
-						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.CoaAkunBank, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Kredit, Balance: -updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
+						gl2 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.CoaAkunBank,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          0,
+							Kredit:         updated.Kredit,
+							Balance:        -updated.Kredit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl2)
+						syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 
 					}
 				} else if tipeAkun == "2" || tipeAkun == "3" || tipeAkun == "4" {
 					if updated.Kredit > 0 {
-						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Kredit, Kredit: 0, Balance: updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl1 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.AkunTransaksi,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          updated.Kredit,
+							Kredit:         0,
+							Balance:        updated.Kredit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl1)
-						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Kredit, Balance: -updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
+						gl2 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.CoaAkunBank,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          0,
+							Kredit:         updated.Kredit,
+							Balance:        -updated.Kredit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl2)
+						syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 					}
 					if updated.Debit > 0 {
-						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Debit, Kredit: 0, Balance: updated.Debit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl1 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.CoaAkunBank,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          updated.Debit,
+							Kredit:         0,
+							Balance:        updated.Debit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl1)
-						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Debit, Balance: -updated.Debit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
+						gl2 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.AkunTransaksi,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          0,
+							Kredit:         updated.Debit,
+							Balance:        -updated.Debit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl2)
+						syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 					}
 				} else if tipeAkun == "5" || tipeAkun == "6" || tipeAkun == "7" || tipeAkun == "8" {
 					if updated.Debit > 0 {
-						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Debit, Kredit: 0, Balance: updated.Debit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl1 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.AkunTransaksi,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          updated.Debit,
+							Kredit:         0,
+							Balance:        updated.Debit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl1)
-						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Debit, Balance: -updated.Debit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
+						gl2 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.CoaAkunBank,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          0,
+							Kredit:         updated.Debit,
+							Balance:        -updated.Debit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl2)
+						syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 					}
 					if updated.Kredit > 0 {
-						gl1 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: updated.Kredit, Kredit: 0, Balance: updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						gl1 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.AkunTransaksi,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          updated.Kredit,
+							Kredit:         0,
+							Balance:        updated.Kredit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl1)
-						gl2 := models.GL{Tanggal: updated.Tanggal, COAAkunBank: updated.CoaAkunBank, AkunTransaksi: updated.AkunTransaksi, Deskripsi: updated.Deskripsi, Debit: 0, Kredit: updated.Kredit, Balance: -updated.Kredit, NomorTransaksi: updated.NoTransaksi, ProjectNo: updated.ProjectNo, ProjectName: updated.ProjectName}
+						syncGLSummary(db, gl1.AkunTransaksi, gl1.Tanggal, gl1.Debit, gl1.Kredit)
+
+						gl2 := models.GL{
+							Tanggal:        updated.Tanggal,
+							COAAkunBank:    updated.CoaAkunBank,
+							AkunTransaksi:  updated.CoaAkunBank,
+							Deskripsi:      updated.Deskripsi,
+							Debit:          0,
+							Kredit:         updated.Kredit,
+							Balance:        -updated.Kredit,
+							NomorTransaksi: updated.NoTransaksi,
+							ProjectNo:      updated.ProjectNo,
+							ProjectName:    updated.ProjectName}
 						db.Create(&gl2)
+						syncGLSummary(db, gl2.AkunTransaksi, gl2.Tanggal, gl2.Debit, gl2.Kredit)
 					}
 				}
 			}
@@ -439,15 +600,48 @@ func UpdateInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 func DeleteInputTransaksi(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
-		// Hapus juga GL yang terkait
 		var input models.InputTransaksi
 		if err := db.First(&input, id).Error; err == nil {
-			db.Where("nomor_transaksi = ?", input.NoTransaksi).Delete(&models.GL{})
+			// Ambil semua GL terkait (termasuk yang sudah di-soft delete)
+			var gls []models.GL
+			db.Unscoped().Where("nomor_transaksi = ?", input.NoTransaksi).Find(&gls)
+			// Kurangi summary sebelum hapus GL
+			for _, gl := range gls {
+				syncGLSummary(db, gl.AkunTransaksi, gl.Tanggal, -gl.Debit, -gl.Kredit)
+			}
+			// Hard delete GL
+			db.Unscoped().Where("nomor_transaksi = ?", input.NoTransaksi).Delete(&models.GL{})
 		}
-		if err := db.Delete(&models.InputTransaksi{}, id).Error; err != nil {
+		// Hard delete InputTransaksi
+		if err := db.Unscoped().Delete(&models.InputTransaksi{}, id).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 		c.JSON(http.StatusOK, gin.H{"message": "Deleted"})
+	}
+}
+
+func syncGLSummary(db *gorm.DB, akun string, tanggal time.Time, debitDelta, kreditDelta float64) {
+	tahun := tanggal.Year()
+	bulan := int(tanggal.Month())
+	var summary models.GLSummary
+	err := db.Where("akun_transaksi = ? AND tahun = ? AND bulan = ?", akun, tahun, bulan).First(&summary).Error
+
+	if err == nil {
+		fmt.Printf("[DEBUG] syncGLSummary: Updating existing summary for Akun=%s, Tahun=%d, Bulan=%d\n", akun, tahun, bulan)
+		fmt.Printf("[DEBUG] syncGLSummary: Found summary: %+v, Error: %v\n", summary, err)
+		fmt.Printf("[DEBUG] syncGLSummary: Akun=%s, Tahun=%d, Bulan=%d, DebitDelta=%.2f, KreditDelta=%.2f\n", akun, tahun, bulan, debitDelta, kreditDelta)
+		db.Model(&summary).Updates(map[string]interface{}{
+			"total_debit":  summary.TotalDebit + debitDelta,
+			"total_kredit": summary.TotalKredit + kreditDelta,
+		})
+	} else if err == gorm.ErrRecordNotFound {
+		db.Create(&models.GLSummary{
+			AkunTransaksi: akun,
+			Tahun:         tahun,
+			Bulan:         bulan,
+			TotalDebit:    debitDelta,
+			TotalKredit:   kreditDelta,
+		})
 	}
 }

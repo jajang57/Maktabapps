@@ -1,3 +1,4 @@
 # Dependencies
 /frontend/node_modules
 /backend/server.exe
+node_modules

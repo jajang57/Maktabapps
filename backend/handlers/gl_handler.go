@@ -62,7 +62,7 @@ func UpdateGL(db *gorm.DB) gin.HandlerFunc {
 func DeleteGL(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		id := c.Param("id")
-		if err := db.Delete(&models.GL{}, id).Error; err != nil {
+		if err := db.Unscoped().Delete(&models.GL{}, id).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}

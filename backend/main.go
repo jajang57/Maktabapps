@@ -47,7 +47,7 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	err = db.AutoMigrate(&models.Jurnal{}, &models.JurnalDetail{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{})
+	err = db.AutoMigrate(&models.Jurnal{}, &models.JurnalDetail{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{})
 
 	if err != nil {
 		panic(fmt.Sprintf("AutoMigrate error: %v", err))
@@ -109,6 +109,8 @@ func main() {
 		api.PUT("/input-transaksi/:id", handlers.UpdateInputTransaksi(db))
 		api.DELETE("/input-transaksi/:id", handlers.DeleteInputTransaksi(db))
 		api.GET("/generate-no-transaksi", handlers.GetGenerateNoTransaksi(db))
+		api.GET("/trial-balance", handlers.GetTrialBalance(db))
+		api.GET("/buku-besar", handlers.GetBukuBesar(db))
 
 		// Master Project Routes
 		masterProjectRoutes := api.Group("/master-project")
