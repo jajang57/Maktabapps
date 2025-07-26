@@ -42,6 +42,10 @@ func PostMasterCOA(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Kode sudah digunakan"})
 			return
 		}
+		if err := db.Where("nama = ?", coa.Nama).First(&existing).Error; err == nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Nama sudah digunakan"})
+			return
+		}
 
 		if err := db.Create(&coa).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})

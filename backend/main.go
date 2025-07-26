@@ -47,7 +47,7 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	err = db.AutoMigrate(&models.Jurnal{}, &models.JurnalDetail{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{})
+	err = db.AutoMigrate(&models.AJE{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{})
 
 	if err != nil {
 		panic(fmt.Sprintf("AutoMigrate error: %v", err))
@@ -88,11 +88,7 @@ func main() {
 	api.Use(handlers.AuthMiddleware())
 	{
 		api.POST("/logout", handlers.Logout(db))
-		api.GET("/jurnal", handlers.GetJurnal(db))
-		api.POST("/jurnal", handlers.PostJurnal(db))
-		api.POST("/jurnal-detail", handlers.PostJurnalDetail(db))
-		api.PUT("/jurnal-detail", handlers.PostJurnalDetail(db))
-		api.GET("/jurnal-detail", handlers.GetJurnalDetails(db))
+
 		api.GET("/master-coa", handlers.GetMasterCOA(db))
 		api.POST("/master-coa", handlers.PostMasterCOA(db))
 		api.PUT("/master-coa/:id", handlers.UpdateMasterCOA(db))
@@ -102,8 +98,7 @@ func main() {
 		api.PUT("/master-category-coa/:id", handlers.UpdateMasterCategoryCOA(db))
 		api.DELETE("/master-category-coa/:id", handlers.DeleteMasterCategoryCOA(db))
 		api.GET("/coa-kas-bank", handlers.GetCOAKasBank(db))
-		api.DELETE("/jurnal-detail", handlers.DeleteJurnalDetailByNoBukti(db))
-		api.GET("/generate-no-bukti", handlers.GenerateNoBukti(db))
+
 		api.GET("/input-transaksi", handlers.GetInputTransaksi(db))
 		api.POST("/input-transaksi", handlers.PostInputTransaksi(db))
 		api.PUT("/input-transaksi/:id", handlers.UpdateInputTransaksi(db))
@@ -126,6 +121,17 @@ func main() {
 		api.POST("/gl", handlers.CreateGL(db))
 		api.PUT("/gl/:id", handlers.UpdateGL(db))
 		api.DELETE("/gl/:id", handlers.DeleteGL(db))
+
+		// AJE Routes
+		api.GET("/aje", handlers.GetAJE(db))
+		api.GET("/aje/coa-akun-aje", handlers.GetCOAAkunAJE(db))
+		api.POST("/aje", handlers.PostAJE(db))                             // save
+		api.POST("/aje/posting", handlers.PostingAJE(db))                  // posting
+		api.POST("/aje/unposting", handlers.UnpostingAJE(db))              // unposting
+		api.GET("/aje/generate-no-bukti", handlers.GenerateNoBuktiAJE(db)) // generate nomor otomatis
+		api.POST("/aje/delete", handlers.DeleteAJE(db))                    // delete
+		api.GET("/aje/cek-no-bukti", handlers.CekNoBuktiAJE(db))           // cek no bukti di AJE
+		api.GET("/gl/cek-no-bukti", handlers.CekNoBuktiGL(db))             // cek no bukti di GL
 	}
 
 	r.Run("0.0.0.0:8080")
