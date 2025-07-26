@@ -17,7 +17,7 @@ import Setting from "./pages/Setting";
 import TrialBalance from "./pages/laporan/TrialBalance";
 import BukuBesar from "./pages/laporan/BukuBesar";
 import Transaksi from "./pages/Transaksi";
-import JurnalUmum from "./pages/transaksi/JurnalUmum";
+import AJE from "./pages/transaksi/AJE";
 import Pembelian from "./pages/transaksi/Pembelian";
 import Penjualan from "./pages/transaksi/Penjualan";
 import InputTransaksiPage from "./pages/transaksi/InputTransaksiPage";
@@ -109,10 +109,10 @@ export default function App() {
               </Layout>
             </ProtectedRoute>
           } />
-          <Route path="/transaksi/jurnal-umum" element={
+          <Route path="/transaksi/AJE" element={
             <ProtectedRoute>
               <Layout>
-                <JurnalUmum />
+                <AJE />
               </Layout>
             </ProtectedRoute>
           } />

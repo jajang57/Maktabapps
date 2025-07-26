@@ -63,7 +63,7 @@ export default function TopNavbar() {
       name: "Transaksi",
       dropdown: [
         { name: "Input Transaksi", to: "/input-transaksi" },
-        { name: "Jurnal Umum", to: "/transaksi/jurnal-umum" },
+        { name: "AJE", to: "/transaksi/AJE" },
         { name: "Cash Bank", to: "/transaksi/cash-bank" },
         { name: "Pembelian", to: "/transaksi/pembelian" },
         { name: "Penjualan", to: "/transaksi/penjualan" },

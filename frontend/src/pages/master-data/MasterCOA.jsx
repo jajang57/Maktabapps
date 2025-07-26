@@ -9,8 +9,8 @@ export default function MasterCOA() {
   const [filterText, setFilterText] = useState("");
   const [filteredData, setFilteredData] = useState([]);
   const [editId, setEditId] = useState(null);
-  const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(10);
+  // const [page, setPage] = useState(0);
+  // const [rowsPerPage, setRowsPerPage] = useState(10);
   const tableRef = useRef();
 
   const [filterKode, setFilterKode] = useState("");
@@ -294,9 +294,8 @@ export default function MasterCOA() {
     items.forEach((item) => flatData.push(item));
   });
 
-  // Paging logic
-  const pageCount = Math.ceil(flatData.length / rowsPerPage);
-  const pagedData = flatData.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+  // Paging removed: show all data in scrollable table
+  const pagedData = flatData;
 
   // Fungsi untuk generate kode COA berdasarkan kategori
   const generateKodeCOA = (kategoryCOAId) => {
@@ -558,7 +557,7 @@ export default function MasterCOA() {
               Print
             </button>
           </div>
-          <div ref={tableRef}>
+          <div ref={tableRef} style={{ maxHeight: '500px', overflowY: 'auto' }}>
             <table className="w-full border rounded-lg text-sm shadow-sm">
               <thead>
                 <tr className="bg-indigo-100 text-gray-700">
@@ -640,39 +639,7 @@ export default function MasterCOA() {
                 )}
               </tbody>
             </table>
-            {/* Pagination */}
-            <div className="flex items-center gap-2 mt-2">
-              <button
-                onClick={() => setPage((p) => Math.max(0, p - 1))}
-                disabled={page === 0}
-                className="px-2 py-1 border rounded disabled:opacity-50"
-              >
-                {"<"}
-              </button>
-              <span>
-                Page {page + 1} of {pageCount}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                disabled={page >= pageCount - 1}
-                className="px-2 py-1 border rounded disabled:opacity-50"
-              >
-                {">"}
-              </button>
-              <span className="ml-4">Rows per page:</span>
-              <select
-                value={rowsPerPage}
-                onChange={e => {
-                  setRowsPerPage(Number(e.target.value));
-                  setPage(0); // reset ke halaman pertama
-                }}
-                className="border rounded px-2 py-1"
-              >
-                {[5, 10, 20, 50, 100].map(n => (
-                  <option key={n} value={n}>{n}</option>
-                ))}
-              </select>
-            </div>
+            {/* Pagination removed: now using scrollable table */}
           </div>
         </div>
       </div>

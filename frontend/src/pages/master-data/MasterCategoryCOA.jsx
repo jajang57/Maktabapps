@@ -115,6 +115,7 @@ export default function MasterCategoryCOA() {
           row.nama.toLowerCase().includes(val) ||
           row.tipeAkun.toLowerCase().includes(val)
       )
+      .sort((a, b) => a.kode.localeCompare(b.kode))
     );
   };
 
@@ -157,6 +158,7 @@ export default function MasterCategoryCOA() {
         </div>
       ),
       ignoreRowClick: true,
+      
     },
   ];
 
@@ -265,15 +267,17 @@ export default function MasterCategoryCOA() {
             />
           </div>
           <div ref={tableRef}>
-            <DataTable
-              columns={columns}
-              data={filteredData}
-              pagination
-              highlightOnHover
-              responsive
-              striped
-              persistTableHead
-            />
+            <div style={{ maxHeight: 500, overflowY: 'auto' }}>
+              <DataTable
+                columns={columns}
+                data={[...filteredData].sort((a, b) => a.kode.localeCompare(b.kode))}
+                highlightOnHover
+                responsive
+                striped
+                persistTableHead
+                pagination={false}
+              />
+            </div>
           </div>
         </div>
       </div>

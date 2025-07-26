@@ -8,6 +8,10 @@ export default function Layout({ children }) {
 
   useEffect(() => {
     localStorage.setItem("theme", isDark ? "dark" : "light");
+    // Debug: cek apakah userId tersimpan di localStorage
+   const user = JSON.parse(localStorage.getItem("user"));
+    const userId = user?.id;
+    console.log("[Layout] userId from localStorage:", userId);
   }, [isDark]);
 
   return (

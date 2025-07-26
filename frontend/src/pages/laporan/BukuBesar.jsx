@@ -50,6 +50,7 @@ export default function BukuBesar() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const printRef = useRef();
+  const sortedCoaList = [...coaList].sort((a, b) => a.kode.localeCompare(b.kode));
 
   // Export ke PDF dengan jsPDF + autoTable
   const handleExportPDF = async () => {
@@ -63,8 +64,9 @@ export default function BukuBesar() {
     let y = 26;
     const periodeText = `Periode: ${startDate ? formatDate(startDate) : '-'} s/d ${endDate ? formatDate(endDate) : '-'}`;
     doc.text(periodeText, 105, y, { align: 'center' });
+    
     const coaLabel = selectedCoa
-      ? (coaList.find(c => c.kode === selectedCoa)?.nama ? `${selectedCoa} - ${coaList.find(c => c.kode === selectedCoa)?.nama}` : selectedCoa)
+      ? (sortedCoaList.find(c => c.kode === selectedCoa)?.nama ? `${selectedCoa} - ${sortedCoaList.find(c => c.kode === selectedCoa)?.nama}` : selectedCoa)
       : 'Semua Akun';
     doc.text(`Akun: ${coaLabel}`, 105, y + 7, { align: 'center' });
 
@@ -199,90 +201,98 @@ export default function BukuBesar() {
 
   return (
     <Box sx={{ p: { xs: 1, md: 3 }, width: "100%", background: "#f9fafb" }}>
-      <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, mb: 2 }}>
-        <Button
-          onClick={handlePrint}
-          variant="contained"
-          color="primary"
-          startIcon={<FiPrinter />}
-        >
-          Print Preview
-        </Button>
-        <Button
-          onClick={handleExportPDF}
-          variant="contained"
-          color="error"
-          startIcon={<AiFillFilePdf />}
-        >
-          Export PDF
-        </Button>
-        <Button
-          onClick={handleExportExcel}
-          variant="contained"
-          color="success"
-          startIcon={<FaFileExcel />}
-        >
-          Export Excel
-        </Button>
-      </Box>
-      <Typography variant="h5" fontWeight="bold" mb={3} color="#1976d2">
-        Buku Besar
-      </Typography>
-      <Paper sx={{ p: 2, mb: 3, borderRadius: 3, boxShadow: 2 }}>
-        <Grid container spacing={2} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <FormControl fullWidth size="small">
-              <InputLabel>Pilih Akun COA</InputLabel>
-              <Select
-                value={selectedCoa}
-                label="Pilih Akun COA"
-                onChange={e => setSelectedCoa(e.target.value)}
-              >
-                <MenuItem value="">Semua Akun</MenuItem>
-                {coaList.map(coa => (
-                  <MenuItem key={coa.kode} value={coa.kode}>
-                    {coa.kode} - {coa.nama}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <TextField
-              label="Tanggal Awal"
-              type="date"
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-            />
-          </Grid>
-          <Grid item xs={6} md={3}>
-            <TextField
-              label="Tanggal Akhir"
-              type="date"
-              size="small"
-              fullWidth
-              InputLabelProps={{ shrink: true }}
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-            />
-          </Grid>
-          <Grid item xs={12} md={2}>
-            <Button
-              variant="contained"
-              color="primary"
-              fullWidth
-              sx={{ height: 40 }}
-              onClick={fetchData}
-              disabled={loading}
+    {/* Tombol export dan print sejajar dengan filter */}
+    <Paper sx={{ p: 2, mb: 3, borderRadius: 3, boxShadow: 2 }}>
+      <Grid container spacing={2} alignItems="center">
+        <Grid item xs={12} md={4}>
+          <FormControl fullWidth size="small">
+            <InputLabel>Pilih Akun COA</InputLabel>
+            <Select
+              value={selectedCoa}
+              label="Pilih Akun COA"
+              onChange={e => setSelectedCoa(e.target.value)}
             >
-              Tampilkan
-            </Button>
-          </Grid>
+              <MenuItem value="">Semua Akun</MenuItem>
+
+              {sortedCoaList.map(coa => (
+                <MenuItem key={coa.kode} value={coa.kode}>
+                  {coa.kode} - {coa.nama}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
         </Grid>
-      </Paper>
+        <Grid item xs={6} md={3}>
+          <TextField
+            label="Tanggal Awal"
+            type="date"
+            size="small"
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            value={startDate}
+            onChange={e => setStartDate(e.target.value)}
+          />
+        </Grid>
+        <Grid item xs={6} md={3}>
+          <TextField
+            label="Tanggal Akhir"
+            type="date"
+            size="small"
+            fullWidth
+            InputLabelProps={{ shrink: true }}
+            value={endDate}
+            onChange={e => setEndDate(e.target.value)}
+          />
+        </Grid>
+        <Grid item xs={12} md={2} sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            variant="contained"
+            color="primary"
+            fullWidth
+            sx={{ height: 40 }}
+            onClick={fetchData}
+            disabled={loading}
+          >
+            Tampilkan
+          </Button>
+        </Grid>
+        {/* Tombol export sejajar filter */}
+        <Grid item xs={12} md={12} sx={{ display: 'flex', justifyContent: { xs: 'flex-start', md: 'flex-end' }, gap: 1, mt: { xs: 2, md: 0 } }}>
+          <Button
+            onClick={handlePrint}
+            variant="contained"
+            color="primary"
+            startIcon={<FiPrinter />}
+          >
+            Print Preview
+          </Button>
+          <Button
+            onClick={handleExportPDF}
+            variant="contained"
+            color="error"
+            startIcon={<AiFillFilePdf />}
+          >
+            Export PDF
+          </Button>
+          <Button
+            onClick={handleExportExcel}
+            variant="contained"
+            color="success"
+            startIcon={<FaFileExcel />}
+          >
+            Export Excel
+          </Button>
+        </Grid>
+      </Grid>
+    </Paper>
+    <Typography variant="h5" fontWeight="bold" mb={3} color="#1976d2">
+      {(() => {
+        if (!selectedCoa) return 'Buku Besar';
+        const coa = coaList.find(c => c.kode === selectedCoa);
+        if (coa && coa.nama) return `Buku Besar ${coa.nama}`;
+        return `Buku Besar ${selectedCoa}`;
+      })()}
+    </Typography>
       {error && <Box color="error.main" mb={2}>{error}</Box>}
       <div ref={printRef}>
       <TableContainer component={Paper} sx={tableContainerStyle}>
