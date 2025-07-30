@@ -29,22 +29,22 @@ export default function SimpleDropdownFilterButton({
         <FilterListIcon fontSize="small" />
       </IconButton>
       {open && (
-        <div style={{ position: 'absolute', zIndex: 9999, top: 24, right: 0 }}>
-          <ClickAwayListener onClickAway={() => setOpen(false)}>
-            <div>
-              <SimpleDropdownFilter
-                type={filterType}
-                options={options}
-                value={value}
-                onChange={onChange}
-                placeholder={placeholder}
-                minWidth={minWidth}
-                maxHeight={maxHeight}
-              />
-            </div>
-          </ClickAwayListener>
-        </div>
-      )}
+      <div style={{ position: 'absolute', zIndex: 9999, top: 24, right: 0, minWidth: minWidth || 400 }}>
+        <ClickAwayListener onClickAway={() => setOpen(false)}>
+          <div>
+            <SimpleDropdownFilter
+              type={filterType}
+              options={options}
+              value={value}
+              onChange={onChange}
+              placeholder={placeholder}
+              minWidth={minWidth}
+              maxHeight={maxHeight}
+            />
+          </div>
+        </ClickAwayListener>
+      </div>
+    )}
     </>
   );
 }

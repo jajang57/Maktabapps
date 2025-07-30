@@ -40,7 +40,7 @@ export default function Login() {
       // Buat device info untuk single device validation
       const deviceInfo = `${navigator.userAgent} - ${window.screen.width}x${window.screen.height} - ${new Date().getTimezoneOffset()}`;
       
-      const response = await fetch("http://localhost:8080/api/login", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

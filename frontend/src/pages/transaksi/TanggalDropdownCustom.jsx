@@ -9,7 +9,27 @@ export default function TanggalDropdownCustom({ rows, value, onChange, hideInput
     const map = {};
     rows.forEach(row => {
       if (!row.tanggal) return;
-      const [year, month, day] = row.tanggal.split("-");
+      let year, month, day;
+      if (typeof row.tanggal === "string") {
+        // Jika string, coba split
+        const parts = row.tanggal.split("-");
+        if (parts.length === 3) {
+          [year, month, day] = parts;
+        } else {
+          // fallback: parse string ke Date
+          const d = new Date(row.tanggal);
+          if (isNaN(d.getTime())) return;
+          year = String(d.getFullYear());
+          month = String(d.getMonth() + 1).padStart(2, "0");
+          day = String(d.getDate()).padStart(2, "0");
+        }
+      } else if (row.tanggal instanceof Date && !isNaN(row.tanggal.getTime())) {
+        year = String(row.tanggal.getFullYear());
+        month = String(row.tanggal.getMonth() + 1).padStart(2, "0");
+        day = String(row.tanggal.getDate()).padStart(2, "0");
+      } else {
+        return;
+      }
       if (!map[year]) map[year] = {};
       if (!map[year][month]) map[year][month] = [];
       if (!map[year][month].includes(day)) map[year][month].push(day);
@@ -53,6 +73,20 @@ export default function TanggalDropdownCustom({ rows, value, onChange, hideInput
     } else {
       onChange(Array.from(new Set([...value, ...allTgl])));
     }
+  };
+  const handleChange = (selected) => {
+    // selected: array of Date or string
+    const formatted = selected
+      .map(tgl => {
+        const d = new Date(tgl);
+        if (isNaN(d.getTime())) return "";
+        const day = String(d.getDate()).padStart(2, "0");
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const year = d.getFullYear();
+        return `${day}/${month}/${year}`;
+      })
+      .filter(Boolean);
+    onChange(formatted);
   };
 
   // UI

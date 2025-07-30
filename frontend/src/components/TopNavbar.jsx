@@ -43,45 +43,110 @@ export default function TopNavbar() {
 
   const navItems = [
     { name: "Dashboard", to: "/dashboard" },
-    {
-      name: "Master Data",
-      dropdown: [
-        {
-          name: "AKUN",
-          subDropdown: [
-            { name: "Kategori Akun", to: "/master-data/mastercatcoa" },
-            { name: "Akun", to: "/master-data/coa" },
-          ],
-        },
-        { name: "Pemasok", to: "/master-data/pemasok" },
-        { name: "Pembeli", to: "/master-data/pembeli" },
-        { name: "Karyawan", to: "/master-data/karyawan" },
-        { name: "Project", to: "/master-data/project" },
-      ],
-    },
+    // {
+    //   name: "Master Data",
+    //   dropdown: [
+    //     {
+    //       name: "AKUN",
+    //       subDropdown: [
+    //         { name: "Kategori Akun", to: "/master-data/mastercatcoa" },
+    //         { name: "Akun", to: "/master-data/coa" },
+    //       ],
+    //     },
+    //     
+    //   ],
+    // },
     {
       name: "Transaksi",
       dropdown: [
-        { name: "Input Transaksi", to: "/input-transaksi" },
-        { name: "AJE", to: "/transaksi/AJE" },
-        { name: "Cash Bank", to: "/transaksi/cash-bank" },
+        { name: "Akun category", to: "/master-data/mastercatcoa"},
+        { name: "Akun", to: "/master-data/coa"},
+        { name: "Buku Kas", to: "/input-transaksi" },
         { name: "Pembelian", to: "/transaksi/pembelian" },
         { name: "Penjualan", to: "/transaksi/penjualan" },
+        { name: "Aset" },
+        
+      ],
+    },
+    {
+      name: "Jurnal",
+      dropdown: [
         {
-          name: "GL",
+          name: "Jurnal Umum",
           to: "/transaksi/gl"
+        },
+        { name: "Jurnal Penyesuaian", to: "/transaksi/AJE" },
+        {name: "Riwayat Jurnal"},
+      ],
+    },
+    {
+      name: "Buku Besar",
+      dropdown: [
+        { name: "Neraca Saldo", to: "/laporan/trial-balance" },
+        { name: "Buku Besar Utama" },
+        { name: "Buku Besar Pembantu", to: "/laporan/buku-besar" },
+        { name: "Pemasok", to: "/master-data/pemasok" },
+        { name: "Pembeli", to: "/master-data/pembeli" },
+        { name: "Pekerjaan", to: "/master-data/project" },
+
+      ],
+    },
+    {
+      name: "Pajak",
+      dropdown: [
+        { name: "Kalkulator Pajak" },
+        { name: "Proyeksi Pajak" },
+        {
+          name: "Arsip Pajak",
+          subDropdown: [
+            { name: "Faktur Pajak" },
+            { name: "Bukti Potong Pajak"},
+          ],
         },
       ],
     },
     {
-      name: "Laporan",
+      name: "Laporan Keuangan",
       dropdown: [
-        { name: "Trial Balance", to: "/laporan/trial-balance" },
-        { name: "Buku Besar", to: "/laporan/buku-besar" },
-
+        { name: "Neraca" },
+        { name: "Laba Rugi" },
+        { name: "Arus Kas" },
+        { name: "Perubahan Modal" },
       ],
     },
-    { name: "Setting", to: "/setting" },
+     {
+      name: "Anggaran",
+      dropdown: [
+        { name: "Anggaran Tahunan / Bulanan" },
+        { name: "Anggaran Dan Realisasi" },
+        { name: "Simulasi Pajak Berdasarkan Anggaran" },
+      ],
+    },
+    { 
+       name: "Pengaturan",
+      dropdown: [
+        { name: "Profil Perusahaan",
+          subDropdown: [
+            { name: "Informasi umum" },
+            { name: "Karyawan" },
+            { name: "Pemasok" },
+            { name: "Pembeli" },
+           
+          ],
+        },
+        { name: "Pajak Perusahaan" },
+        { name: "Sinkronisasi" }
+
+      ]
+    },
+    { name: "Bantuan",
+      dropdown: [
+        { name: "Panduan Pengguna (FAQ)"},
+        { name: "Chat Dukungan/ Tiket Masalah"},
+        { name: "Kontak CS/ Konsultan Pajak"},
+      ]
+    },
+    { name: "Pemberitahuan",}
   ];
 
   const handleLogout = () => {

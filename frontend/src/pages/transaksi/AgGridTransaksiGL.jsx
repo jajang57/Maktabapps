@@ -1,55 +1,32 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { AgGridReact } from "ag-grid-react";
+import React, { useEffect, useState } from "react";
 import api from "../../utils/api";
 import { Box, Button, Typography } from "@mui/material";
 import { FiPrinter } from "react-icons/fi";
 import { FaFileExcel } from "react-icons/fa";
-
-// Modular ag-grid imports (community & enterprise)
-import { ModuleRegistry } from 'ag-grid-community';
-import { ClientSideRowModelModule } from 'ag-grid-community';
-import { CsvExportModule } from 'ag-grid-community';
-import { ExcelExportModule } from 'ag-grid-enterprise';
-import { SetFilterModule } from 'ag-grid-enterprise';
-import { MasterDetailModule } from 'ag-grid-enterprise';
-
-// Register only the modules needed globally (for features like export, filter, etc)
-ModuleRegistry.registerModules([
-  ClientSideRowModelModule,
-  CsvExportModule,
-  ExcelExportModule,
-  SetFilterModule,
-  MasterDetailModule,
-]);
+import SimpleDropdownFilterButton from "./SimpleDropdownFilterButton"; // Pastikan path benar
+import TanggalDropdownCustomButton from "./TanggalDropdownCustomButton";
 
 export default function AgGridTransaksiGL() {
   const [rowData, setRows] = useState([]);
   const [masterCoaList, setMasterCoaList] = useState([]);
-  const [filterModel, setFilterModel] = useState({ items: [] });
+  const [tanggalFilter, setTanggalFilter] = useState([]);
+  const [akunFilter, setAkunFilter] = useState([]);
+  const [deskripsiFilter, setDeskripsiFilter] = useState("");
+  const [noTransaksiFilter, setNoTransaksiFilter] = useState("");
+  const [projectNoFilter, setProjectNoFilter] = useState("");
+  const [projectNameFilter, setProjectNameFilter] = useState("");
 
-    // Ambil master COA
-  useEffect(() => {
-    api.get("/master-coa").then(res => {
-      setMasterCoaList(res.data || []);
-    });
-  }, []);
+  // Ambil master COA
+useEffect(() => {
+  api.get('/master-coa').then(res => {
+    setMasterCoaList(Array.isArray(res.data) ? res.data : []);
+  });
+}, []);
 
-    // Helper mapping kode ke nama COA
-  const getCoaBankDisplay = (kode) => {
-    if (!kode) return '';
-    const found = masterCoaList.find(coa => String(coa.kode) === String(kode));
-    return found ? `${found.kode} - ${found.nama}` : kode;
-  };
-  const getAkunTransaksiDisplay = (kode) => {
-    if (!kode) return '';
-    const found = masterCoaList.find(coa => String(coa.kode) === String(kode));
-    return found ? `(${found.kode}) ${found.nama}` : kode;
-  };
-   // Ambil data GL
+  // Ambil data GL
   useEffect(() => {
     api.get("/gl")
       .then((res) => {
-        console.log("GL API DATA", res.data);
         const mapped = (res.data || [])
           .filter(row => row && typeof row === "object")
           .map((row, idx) => {
@@ -93,57 +70,53 @@ export default function AgGridTransaksiGL() {
       .catch(() => {});
   }, []);
   
-  const columnDefs = [
-    { headerName: "No", field: "id", width: 60, filter: false },
-    {
-      headerName: "Tanggal",
-      field: "tanggal",
-      width: 140,
-      
-    },
-    {
-      field: "akunTransaksi",
-      headerName: "Akun Transaksi",
-      width: 170,
-      cellRenderer: (params) => getAkunTransaksiDisplay(params.value),
-      filter: 'agSetColumnFilter',
-      filterParams: {
-        valueFormatter: (params) => getAkunTransaksiDisplay(params.value),
-        keyCreator: (params) => params.value,
-      },
-      valueFormatter: (params) => getAkunTransaksiDisplay(params.value),
-    },
-    {
-      headerName: "Deskripsi",
-      field: "deskripsi",
-      width: 300
-    },
-    {
-      headerName: "Debit",
-      field: "debit",
-      width: 120,
-      valueFormatter: p => p.value ? Number(p.value).toLocaleString() : "-",
-    },
-    {
-      headerName: "Kredit",
-      field: "kredit",
-      width: 120,
-      valueFormatter: p => p.value ? Number(p.value).toLocaleString() : "-",
-    },
-    {
-      headerName: "Nomor Transaksi",
-      field: "nomorTransaksi",
-      width: 180,
-      
-    },
-    { headerName: "Project No", field: "projectNo", width: 120 },
-    { headerName: "Project Name", field: "projectName", width: 160 },
-  ];
+  // Helper mapping kode ke nama COA
+  const getAkunTransaksiDisplay = (kode) => {
+    if (!kode) return '';
+    const found = masterCoaList.find(coa => String(coa.kode) === String(kode));
+    return found ? `(${found.kode}) ${found.nama}` : kode;
+  };
+
+  // Format tanggal dd/mm/yyyy
+  const formatTanggal = (tgl) => {
+    if (!tgl) return "";
+    const d = new Date(tgl);
+    if (isNaN(d.getTime())) return "";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const formattedTanggalFilter = tanggalFilter.map(tgl => {
+    if (!tgl) return "";
+    const d = new Date(tgl);
+    if (isNaN(d.getTime())) return "";
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  });
+
+  // Filter data
+  const filteredRows = rowData.filter(row => {
+    if (formattedTanggalFilter.length && !formattedTanggalFilter.includes(formatTanggal(row.tanggal))) return false;
+    if (akunFilter.length && !akunFilter.includes(row.akunTransaksi)) return false;
+    if (deskripsiFilter && !row.deskripsi?.toLowerCase().includes(deskripsiFilter.toLowerCase())) return false;
+    if (noTransaksiFilter.length && !noTransaksiFilter.includes(row.nomorTransaksi)) return false;
+    if (projectNoFilter && !row.projectNo?.toLowerCase().includes(projectNoFilter.toLowerCase())) return false;
+    if (projectNameFilter && !row.projectName?.toLowerCase().includes(projectNameFilter.toLowerCase())) return false;
+    return true;
+  });
 
   // Export to Excel
   const handleExportExcel = async () => {
     const xlsx = await import("xlsx");
-    const ws = xlsx.utils.json_to_sheet(rowData);
+    const ws = xlsx.utils.json_to_sheet(filteredRows.map(row => ({
+      ...row,
+      tanggal: formatTanggal(row.tanggal),
+      akunTransaksi: getAkunTransaksiDisplay(row.akunTransaksi),
+    })));
     const wb = xlsx.utils.book_new();
     xlsx.utils.book_append_sheet(wb, ws, "TransaksiGL");
     xlsx.writeFile(wb, "TransaksiGL.xlsx");
@@ -152,6 +125,15 @@ export default function AgGridTransaksiGL() {
   // Print Table
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleResetFilter = () => {
+    setTanggalFilter([]);
+    setAkunFilter([]);
+    setDeskripsiFilter("");
+    setNoTransaksiFilter([]);
+    setProjectNoFilter("");
+    setProjectNameFilter("");
   };
 
   return (
@@ -177,37 +159,165 @@ export default function AgGridTransaksiGL() {
           </Button>
         </Box>
       </Box>
-      <div className="ag-theme-alpine" style={{ height: 600, width: "100%" }}>
-        <AgGridReact
-          modules={[ClientSideRowModelModule, CsvExportModule, ExcelExportModule, SetFilterModule, MasterDetailModule]}
-          rowData={rowData}
-          columnDefs={columnDefs}
-          domLayout="autoHeight"
-          animateRows
-          suppressRowClickSelection
-          pagination={false}
-          sideBar={{
-            toolPanels: [
-              {
-                id: 'filters',
-                labelDefault: 'Filter',
-                labelKey: 'filter',
-                iconKey: 'filter',
-                toolPanel: 'agFiltersToolPanel',
-                minWidth: 350,
-                maxWidth: 500,
-                width: 380
-              }
-            ],
-            defaultToolPanel: 'filters',
-            position: 'right',
-          }}
-          defaultColDef={{
-            filter: true,
-            floatingFilter: false,
-            resizable: true,
-          }}
-        />
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
+  <span style={{ fontSize: 14, color: "#666" }}>Filter Aktif:</span>
+  {tanggalFilter.length > 0 && tanggalFilter.map(val => (
+    <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+      {val} <span style={{ cursor: "pointer" }} onClick={() => setTanggalFilter(tanggalFilter.filter(t => t !== val))}>×</span>
+    </span>
+  ))}
+  {akunFilter.length > 0 && akunFilter.map(val => {
+    const label = masterCoaList.find(coa => String(coa.kode) === String(val));
+    return (
+      <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+        {label ? label.nama : val} <span style={{ cursor: "pointer" }} onClick={() => setAkunFilter(akunFilter.filter(a => a !== val))}>×</span>
+      </span>
+    );
+  })}
+  {deskripsiFilter && (
+    <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+      {deskripsiFilter} <span style={{ cursor: "pointer" }} onClick={() => setDeskripsiFilter("")}>×</span>
+    </span>
+  )}
+  {noTransaksiFilter.length > 0 && noTransaksiFilter.map(val => (
+    <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+      {val} <span style={{ cursor: "pointer" }} onClick={() => setNoTransaksiFilter(noTransaksiFilter.filter(no => no !== val))}>×</span>
+    </span>
+  ))}
+  {projectNoFilter && (
+    <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+      {projectNoFilter} <span style={{ cursor: "pointer" }} onClick={() => setProjectNoFilter("")}>×</span>
+    </span>
+  )}
+  {projectNameFilter && (
+    <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+      {projectNameFilter} <span style={{ cursor: "pointer" }} onClick={() => setProjectNameFilter("")}>×</span>
+    </span>
+  )}
+  <Button
+    variant="outlined"
+    size="small"
+    sx={{ ml: 1, fontSize: 13, minWidth: 0, px: 1, py: 0.5 }}
+    onClick={handleResetFilter}
+  >
+    RESET FILTER
+  </Button>
+</Box>
+      <div style={{ overflowX: "auto" }}>
+        <table className="min-w-full border text-sm">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="border px-2 py-1" style={{ minWidth: 60 }}>No</th>
+             <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 120 }}>
+  Tanggal
+  <span style={{ position: 'absolute', right: 4, top: 4 }}>
+    <TanggalDropdownCustomButton
+      rows={rowData}
+      value={tanggalFilter}
+      onChange={setTanggalFilter}
+    />
+  </span>
+</th>
+              <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 220 }}>
+                Akun Transaksi
+                <span style={{ position: 'absolute', right: 4, top: 4 }}>
+                  <SimpleDropdownFilterButton
+                    filterType="multi-select"
+                    options={
+                      masterCoaList
+                        .sort((a, b) => a.kode.localeCompare(b.kode))
+                        .map(coa => ({
+                          label: `(${coa.kode}) ${coa.nama}`,
+                          value: coa.kode
+                        }))
+                    }
+                    value={akunFilter}
+                    onChange={setAkunFilter}
+                    placeholder="Cari Akun"
+                    iconTitle="Filter Nama Akun"
+                    dropdownStyle={{ minWidth: 400 }}
+                  />
+                </span>
+              </th>
+              <th className="border px-2 py-1" style={{ minWidth: 200 }}>
+                Deskripsi
+                <div>
+                  <input
+                    type="text"
+                    value={deskripsiFilter}
+                    onChange={e => setDeskripsiFilter(e.target.value)}
+                    placeholder="Cari Deskripsi"
+                    className="border rounded px-1 py-0.5 w-full mt-1"
+                  />
+                </div>
+              </th>
+              <th className="border px-2 py-1" style={{ minWidth: 120 }}>Debit</th>
+              <th className="border px-2 py-1" style={{ minWidth: 120 }}>Kredit</th>
+              <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 160 }}>
+                Nomor Transaksi
+                <span style={{ position: 'absolute', right: 4, top: 4 }}>
+                  <SimpleDropdownFilterButton
+                    filterType="multi-select"
+                    options={
+                      Array.from(new Set(rowData.map(row => row.nomorTransaksi)))
+                        .filter(Boolean)
+                        .sort()
+                        .map(no => ({ label: no, value: no }))
+                    }
+                    value={noTransaksiFilter}
+                    onChange={setNoTransaksiFilter}
+                    placeholder="Cari No. Transaksi"
+                    iconTitle="Filter Nomor Transaksi"
+                    dropdownStyle={{ minWidth: 220 }}
+                  />
+                </span>
+              </th>
+              <th className="border px-2 py-1" style={{ minWidth: 120 }}>
+                Project No
+                <div>
+                  <input
+                    type="text"
+                    value={projectNoFilter}
+                    onChange={e => setProjectNoFilter(e.target.value)}
+                    placeholder="Cari Project No"
+                    className="border rounded px-1 py-0.5 w-full mt-1"
+                  />
+                </div>
+              </th>
+              <th className="border px-2 py-1" style={{ minWidth: 160 }}>
+                Project Name
+                <div>
+                  <input
+                    type="text"
+                    value={projectNameFilter}
+                    onChange={e => setProjectNameFilter(e.target.value)}
+                    placeholder="Cari Project Name"
+                    className="border rounded px-1 py-0.5 w-full mt-1"
+                  />
+                </div>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.map((row, idx) => (
+              <tr key={row.id}>
+                <td className="border px-2 py-1">{idx + 1}</td>
+                <td className="border px-2 py-1">{formatTanggal(row.tanggal)}</td>
+                <td className="border px-2 py-1">{getAkunTransaksiDisplay(row.akunTransaksi)}</td>
+                <td className="border px-2 py-1">{row.deskripsi}</td>
+                <td className="border px-2 py-1" style={{ textAlign: "right" }}>
+                  {row.debit !== "" ? Number(row.debit).toLocaleString("id-ID", { minimumFractionDigits: 2 }) : ""}
+                </td>
+                <td className="border px-2 py-1" style={{ textAlign: "right" }}>
+                  {row.kredit !== "" ? Number(row.kredit).toLocaleString("id-ID", { minimumFractionDigits: 2 }) : ""}
+                </td>
+                <td className="border px-2 py-1">{row.nomorTransaksi}</td>
+                <td className="border px-2 py-1">{row.projectNo}</td>
+                <td className="border px-2 py-1">{row.projectName}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </Box>
   );

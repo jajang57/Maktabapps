@@ -59,7 +59,7 @@ export const AuthProvider = ({ children }) => {
       // Call logout API to clear server-side session
       const token = localStorage.getItem("token");
       if (token) {
-        await fetch("http://localhost:8080/api/logout", {
+        await fetch(`${import.meta.env.VITE_API_URL}/logout`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,

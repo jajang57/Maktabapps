@@ -2,8 +2,10 @@ import axios from 'axios';
 
 // Create axios instance
 const api = axios.create({
-  baseURL: 'http://localhost:8080/api',
+  baseURL: import.meta.env.VITE_API_URL, // gunakan env Vite
 });
+
+console.log('API BASE URL:', import.meta.env.VITE_API_URL); // cek baseURL di console
 
 // Request interceptor untuk menambahkan token
 api.interceptors.request.use(

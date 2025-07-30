@@ -6,6 +6,9 @@ import TanggalDropdownCustom from "./TanggalDropdownCustom";
 import TanggalDropdownCustomButton from "./TanggalDropdownCustomButton";
 import SimpleDropdownFilterButton from "./SimpleDropdownFilterButton";
 import api from "../../utils/api";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { parse, format } from "date-fns";
 
 export default function AJE() {
   const [rows, setRows] = useState([]);
@@ -15,6 +18,20 @@ export default function AJE() {
   const [noBuktiFilter, setNoBuktiFilter] = useState([]); // filter multi-select no bukti
   const [deskripsiFilter, setDeskripsiFilter] = useState(""); // filter text deskripsi
   const [statusPostingFilter, setStatusPostingFilter] = useState([]); // ['posted', 'unposted']
+  const [projectList, setProjectList] = useState([]);
+  const [form, setForm] = useState({
+    tanggal: "",
+    noBukti: "",
+    namaAkun: "",
+    kodeAkun: "",
+    deskripsi: "",
+    debit: "",
+    kredit: "",
+    saved: false,
+    posted: false,
+    projectNo: "",
+    projectName: ""
+  });
   // Load daftar COA non kasbank untuk dropdown Nama Akun
   useEffect(() => {
     async function fetchCOA() {
@@ -33,11 +50,15 @@ export default function AJE() {
       try {
         const res = await api.get("/aje");
         // Tandai baris hasil fetch sebagai saved
-        setRows((res.data || []).map(row => ({
-          ...row,
-          saved: true,
-          posted: !!row.posted
-        })));
+        setRows(
+          sortRowsByTanggalNoBukti(
+            (res.data || []).map(row => ({
+              ...row,
+              saved: true,
+              posted: !!row.posted
+            }))
+          )
+        );
       } catch (err) {
         setRows([]);
       }
@@ -78,8 +99,10 @@ export default function AJE() {
       deskripsi: "",
       debit: "",
       kredit: "",
+      projectNo: "",
+      projectName: "",
       saved: false,
-      posted: false
+      posted: false,
     };
     let insertIdx = idx;
     if (insertIdx === null) {
@@ -242,9 +265,10 @@ export default function AJE() {
     }
     try {
       await api.post("/aje/posting", { id: row.id });
-      setRows(rows.map((r) =>
+      const updatedRows = rows.map((r) =>
         r.noBukti === row.noBukti ? { ...r, posted: true } : r
-      ));
+      );
+      setRows(sortRowsByTanggalNoBukti(updatedRows)); // <-- urutkan setelah posting
       alert("Berhasil posting!");
     } catch (err) {
       alert("Gagal posting: " + (err?.response?.data?.error || err.message));
@@ -295,6 +319,11 @@ export default function AJE() {
     });
   }
 
+  function formatTanggal(tgl) {
+    if (!tgl) return "";
+    const [year, month, day] = tgl.split("-");
+    return `${day}/${month}/${year}`;
+  }
   const handleClone = async (idx) => {
     const row = rows[idx];
     const groupNoBukti = row.noBukti;
@@ -319,6 +348,23 @@ export default function AJE() {
     }));
 
     setRows([...rows, ...clonedRows]);
+  };
+
+  // Ambil data project
+  useEffect(() => {
+    api.get("/master-project")
+      .then(res => setProjectList(res.data.data || []))
+      .catch(() => setProjectList([]));
+  }, []);
+
+  // Fungsi render option
+  const renderProjectOptions = () => {
+    if (!Array.isArray(projectList)) return null;
+    return projectList.map(project => (
+      <option key={project.ID || project.id} value={project.kode_project}>
+        {project.kode_project} - {project.nama_project}
+      </option>
+    ));
   };
 
   return (
@@ -349,13 +395,13 @@ export default function AJE() {
         <table className="min-w-full border text-sm">
           <thead className="bg-gray-100">
             <tr>
-              <th className="border px-2 py-1" style={{ position: 'relative' }}>
-                Tanggal
-                <span style={{ position: 'absolute', right: 4, top: 4 }}>
-                  <TanggalDropdownCustomButton rows={rows} value={tanggalFilter} onChange={setTanggalFilter} />
-                </span>
-              </th>
-              <th className="border px-2 py-1" style={{ position: 'relative' }}>
+             <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 150 }}>
+              Tanggal
+              <span style={{ position: 'absolute', right: 4, top: 4 }}>
+                <TanggalDropdownCustomButton rows={rows} value={tanggalFilter} onChange={setTanggalFilter} />
+              </span>
+             </th>
+              <th className="border px-2 py-1" style={{ position: 'absolute', right: 4, top: 4 }}>
                 No. Bukti
                 <span style={{ position: 'absolute', right: 4, top: 4 }}>
                   <SimpleDropdownFilterButton
@@ -368,16 +414,24 @@ export default function AJE() {
                   />
                 </span>
               </th>
-              <th className="border px-2 py-1" style={{ position: 'relative' }}>
+              <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 220 }}>
                 Nama Akun
                 <span style={{ position: 'absolute', right: 4, top: 4 }}>
                   <SimpleDropdownFilterButton
                     filterType="multi-select"
-                    options={coaList.map(coa => ({ label: `(${coa.kode}) ${coa.nama}`, value: coa.nama }))}
+                    options={
+                      [...coaList]
+                        .sort((a, b) => a.kode.localeCompare(b.kode))
+                        .map(coa => ({
+                          label: `(${coa.kode}) ${coa.nama}`,
+                          value: coa.nama
+                        }))
+                    }
                     value={akunFilter}
                     onChange={setAkunFilter}
                     placeholder="Cari Akun"
                     iconTitle="Filter Nama Akun"
+                    dropdownStyle={{ minWidth: 300 }} // Tambahkan ini jika komponen mendukung
                   />
                 </span>
               </th>
@@ -395,6 +449,8 @@ export default function AJE() {
               </th>
               <th className="border px-2 py-1">Debit</th>
               <th className="border px-2 py-1">Kredit</th>
+              <th className="border px-2 py-1" style={{ minWidth: 120 }}>Project No</th>
+              <th className="border px-2 py-1" style={{ minWidth: 180 }}>Project Name</th>
              <th className="border px-2 py-1" style={{ position: 'relative' }}>
                 Aksi
                 <span style={{ position: 'absolute', right: 4, top: 4 }}>
@@ -415,9 +471,33 @@ export default function AJE() {
           <tbody>
             {filteredRows.map((row, idx) => (
               <tr key={row.id} className={row.posted ? "bg-gray-100" : ""}>
-                <td className="border px-2 py-1">
-                  <input type="date" name="tanggal" value={row.tanggal} onChange={e => handleChange(idx, e)} className="border rounded px-2 py-1" readOnly={row.posted} disabled={row.posted} />
-                </td>
+              <td className="border px-2 py-1" style={{ minWidth: 150 }}>
+                {row.posted ? (
+                  formatTanggal(row.tanggal)
+                ) : (
+                  <DatePicker
+                    selected={
+                      row.tanggal
+                        ? parse(row.tanggal, "yyyy-MM-dd", new Date())
+                        : null
+                    }
+                    onChange={date => {
+                      const iso = date ? format(date, "yyyy-MM-dd") : "";
+                      handleChange(idx, { target: { name: "tanggal", value: iso } });
+                    }}
+                    dateFormat="dd/MM/yyyy"
+                    customInput={
+                      <input
+                        className="border rounded px-2 py-1"
+                        readOnly={row.posted}
+                        disabled={row.posted}
+                        placeholder="dd/mm/yyyy"
+                      />
+                    }
+                    disabled={row.posted}
+                  />
+                )}
+              </td>
                 <td className="border px-2 py-1">
                   <input type="text" name="noBukti" value={row.noBukti} onChange={e => handleChange(idx, e)} className="border rounded px-2 py-1" readOnly={row.posted} disabled={row.posted} />
                 </td>
@@ -498,7 +578,37 @@ export default function AJE() {
                     disabled={row.posted || (row.debit && row.debit !== "" && parseFloat(row.debit) !== 0)}
                   />
                 </td>
-              
+              <td className="border px-2 py-1">
+                <select
+                  name="projectNo"
+                  value={row.projectNo || ""}
+                  onChange={e => {
+                    const value = e.target.value;
+                    const selected = projectList.find(p => p.kode_project === value);
+                    handleChange(idx, { target: { name: "projectNo", value } });
+                    setRows(rows.map((r, i) =>
+                      i === idx
+                        ? { ...r, projectNo: value, projectName: selected ? selected.nama_project : "" }
+                        : r
+                    ));
+                  }}
+                  className="border rounded px-2 py-1 w-full"
+                  disabled={row.posted}
+                >
+                  <option value="">Pilih Project</option>
+                  {renderProjectOptions()}
+                </select>
+              </td>
+              <td className="border px-2 py-1">
+                <input
+                  type="text"
+                  name="projectName"
+                  value={row.projectName || ""}
+                  readOnly
+                  className="border rounded px-2 py-1 w-full bg-gray-100"
+                  placeholder="Nama project otomatis"
+                />
+              </td>
                 <td className="border px-2 py-1 text-center">
                   {!row.saved ? (
                     <>
@@ -526,4 +636,16 @@ export default function AJE() {
       <button type="button" onClick={() => addRow()} className="mt-3 px-4 py-2 bg-indigo-500 text-white rounded">+ Tambah Baris</button>
     </div>
   );
+}
+
+function sortRowsByTanggalNoBukti(rows) {
+  return [...rows].sort((a, b) => {
+    // Bandingkan tanggal (format yyyy-MM-dd)
+    if (a.tanggal < b.tanggal) return -1;
+    if (a.tanggal > b.tanggal) return 1;
+    // Jika tanggal sama, bandingkan noBukti
+    if (a.noBukti < b.noBukti) return -1;
+    if (a.noBukti > b.noBukti) return 1;
+    return 0;
+  });
 }

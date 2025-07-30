@@ -66,6 +66,8 @@ func main() {
 		"http://127.0.0.1:3000",
 		"http://127.0.0.1:3001",
 		"http://127.0.0.1:5173",
+		"http://26.49.48.174:3000",
+		"http://100.67.149.101:3000",
 	}
 	config.AllowMethods = []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"}
 	config.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With"}

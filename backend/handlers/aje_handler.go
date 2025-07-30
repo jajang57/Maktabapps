@@ -101,6 +101,8 @@ func PostingAJE(db *gorm.DB) gin.HandlerFunc {
 				Debit:          a.Debit,
 				Kredit:         a.Kredit,
 				NomorTransaksi: a.NoBukti,
+				ProjectNo:      a.ProjectNo,
+				ProjectName:    a.ProjectName,
 			}
 			db.Create(&gl)
 		}
