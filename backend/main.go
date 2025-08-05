@@ -47,7 +47,7 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	err = db.AutoMigrate(&models.AJE{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{})
+	err = db.AutoMigrate(&models.AJE{}, &models.UserThemeSetting{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{})
 
 	if err != nil {
 		panic(fmt.Sprintf("AutoMigrate error: %v", err))
@@ -85,6 +85,8 @@ func main() {
 	// Public routes (tidak perlu authentication)
 	r.POST("/api/register", handlers.Register(db))
 	r.POST("/api/login", handlers.Login(db))
+	r.GET("/api/user-theme-setting", handlers.GetUserThemeSetting(db))
+	r.POST("/api/user-theme-setting", handlers.SaveUserThemeSetting(db))
 	// Protected routes (perlu authentication)
 	api := r.Group("/api")
 	api.Use(handlers.AuthMiddleware())

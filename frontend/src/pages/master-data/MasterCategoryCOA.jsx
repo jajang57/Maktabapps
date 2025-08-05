@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { useTheme } from "../../context/ThemeContext"; // tambahkan ini
 // Mapping tipe akun value ke nama
 const tipeAkunMap = {
   "1": "Asset",
@@ -12,8 +13,11 @@ const tipeAkunMap = {
 };
 import DataTable from "react-data-table-component";
 import api from "../../utils/api";
+import MasterCard from "../../master_fn/MasterCard";
+import MasterButton from "../../master_fn/MasterButton";
 
 export default function MasterCategoryCOA() {
+  const { theme } = useTheme(); // tambahkan ini
   const [form, setForm] = useState({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
   const [data, setData] = useState([]);
   const [error, setError] = useState("");
@@ -143,18 +147,22 @@ export default function MasterCategoryCOA() {
       name: "Aksi",
       cell: (row) => (
         <div className="flex gap-2">
-          <button
+          <MasterButton
+            type="update"
+            size="sm"
+            shape={theme.buttonShape} // tambahkan ini
             onClick={() => handleEdit(row)}
-            className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-700"
           >
             Edit
-          </button>
-          <button
+          </MasterButton>
+          <MasterButton
+            type="hapus"
+            size="sm"
+            shape={theme.buttonShape} // tambahkan ini
             onClick={() => handleDelete(row)}
-            className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-700"
           >
-            Delete
-          </button>
+            Hapus
+          </MasterButton>
         </div>
       ),
       ignoreRowClick: true,
@@ -166,96 +174,92 @@ export default function MasterCategoryCOA() {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold tracking-tight mb-4">Master Category COA</h1>
       <div className="flex flex-col md:flex-row gap-8">
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md border"
-        >
-          <div className="space-y-4">
-            <div>
-              <label className="block mb-1 font-semibold text-gray-700">
-                Kode Kategori
-              </label>
-              <input
-                type="text"
-                name="kode"
-                value={form.kode}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                placeholder="Contoh: KB001"
-                required
-              />
-            </div>
-            <div>
-              <label className="block mb-1 font-semibold text-gray-700">
-                Nama Kategori
-              </label>
-              <input
-                type="text"
-                name="nama"
-                value={form.nama}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                placeholder="Contoh: Kas & Bank"
-                required
-              />
-            </div>
-            {/* Checkbox di bawah Nama Kategori */}
-            <div>
-              <label className="inline-flex items-center mt-2">
+        <MasterCard className="w-full max-w-md border p-6" >
+          <form
+            onSubmit={handleSubmit}
+            className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md border" 
+            style={{ background: theme.formColor }}
+          >
+            <div className="space-y-3">
+              <div>
+                <label className="block mb-1 font-semibold text-gray-700">
+                  Kode Kategori
+                </label>
                 <input
-                  type="checkbox"
-                  name="isKasBank"
-                  checked={form.isKasBank}
+                  type="text"
+                  name="kode"
+                  value={form.kode}
                   onChange={handleChange}
-                  className="form-checkbox h-5 w-5 text-indigo-600"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  placeholder="Contoh: KB001"
+                  required
                 />
-                <span className="ml-2 text-gray-700">Akun Kas & Bank</span>
-              </label>
+              </div>
+              <div>
+                <label className="block mb-1 font-semibold text-gray-700">
+                  Nama Kategori
+                </label>
+                <input
+                  type="text"
+                  name="nama"
+                  value={form.nama}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  placeholder="Contoh: Kas & Bank"
+                  required
+                />
+              </div>
+              {/* Checkbox di bawah Nama Kategori */}
+              <div>
+                <label className="inline-flex items-center mt-2">
+                  <input
+                    type="checkbox"
+                    name="isKasBank"
+                    checked={form.isKasBank}
+                    onChange={handleChange}
+                    className="form-checkbox h-5 w-5 text-indigo-600"
+                  />
+                  <span className="ml-2 text-gray-700">Akun Kas & Bank</span>
+                </label>
+              </div>
+              <div>
+                <label className="block mb-1 font-semibold text-gray-700">
+                  Tipe Akun
+                </label>
+                <select
+                  name="tipeAkun"
+                  value={form.tipeAkun}
+                  onChange={handleChange}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  required
+                >
+                  <option value="">Pilih Tipe Akun</option>
+                  <option value="1">Asset</option> {/* 1 */}
+                  <option value="2">Kewajiban</option> {/* 2 */}
+                  <option value="3">Modal</option> {/* 3 */}
+                  <option value="4">Pendapatan</option> {/* 4 */}
+                  <option value="5">Harga Pokok Penjualan</option> {/* 5 */}
+                  <option value="6">Beban</option> {/* 6 */}
+                  <option value="7">Pendapatan Lainnya</option> {/* 7 */}
+                  <option value="8">Beban Lainnya</option> {/* 8 */}
+                </select>
+              </div>
+              {error && <div className="text-red-500 text-sm">{error}</div>}
+              <MasterButton type="simpan" shape={theme.buttonShape} className="w-full">
+                Simpan
+              </MasterButton>
+              {editId && (
+                <MasterButton type="refresh" shape={theme.buttonShape} className="w-full mt-2" onClick={() => {
+                    setForm({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
+                    setEditId(null);
+                    setError("");
+                  }}>
+                  Batal Edit
+                </MasterButton>
+              )}
             </div>
-            <div>
-              <label className="block mb-1 font-semibold text-gray-700">
-                Tipe Akun
-              </label>
-              <select
-                name="tipeAkun"
-                value={form.tipeAkun}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
-                required
-              >
-                <option value="">Pilih Tipe Akun</option>
-                <option value="1">Asset</option> {/* 1 */}
-                <option value="2">Kewajiban</option> {/* 2 */}
-                <option value="3">Modal</option> {/* 3 */}
-                <option value="4">Pendapatan</option> {/* 4 */}
-                <option value="5">Harga Pokok Penjualan</option> {/* 5 */}
-                <option value="6">Beban</option> {/* 6 */}
-                <option value="7">Pendapatan Lainnya</option> {/* 7 */}
-                <option value="8">Beban Lainnya</option> {/* 8 */}
-              </select>
-            </div>
-            {error && <div className="text-red-500 text-sm">{error}</div>}
-            <button
-              type="submit"
-              className="w-full bg-indigo-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-600 transition"
-            >
-              Simpan
-            </button>
-            {editId && (
-              <button
-                type="button"
-                className="w-full bg-gray-400 text-white px-4 py-2 rounded-lg font-semibold hover:bg-gray-500 transition mt-2"
-                onClick={() => {
-                  setForm({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
-                  setEditId(null);
-                  setError("");
-                }}
-              >
-                Batal Edit
-              </button>
-            )}
-          </div>
-        </form>
+          </form>
+        </MasterCard>
         <div className="flex-1">
           <div className="flex flex-col md:flex-row md:items-center gap-2 mb-4">
             <input
