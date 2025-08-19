@@ -79,9 +79,9 @@ export default function InputTransaksiPage() {
   return (
     <InputTransaksiLayout>
       {/* ✅ ADD: Debug info di UI */}
-      <div className="bg-yellow-50 border border-yellow-200 p-2 rounded mb-4 text-xs">
+      {/* <div className="bg-yellow-50 border border-yellow-200 p-2 rounded mb-4 text-xs">
         <strong>Debug Info:</strong> selectedCOA = "{selectedCOA}" | refreshTable = {refreshTable.toString()} | shouldJump = {shouldJumpToLatest.toString()} | latestData = {latestTransaksiData?.noTransaksi || 'none'}
-      </div>
+      </div> */}
       
       <InputTransaksiForm 
         ref={formRef}

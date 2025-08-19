@@ -2,8 +2,11 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { useTheme } from '../../context/ThemeContext'; // tambahkan import ini
 
 export default function MasterPembeli() {
+  const { theme } = useTheme(); // gunakan theme
+
   const [pembeliData, setPembeliData] = useState([]);
   const [formData, setFormData] = useState({
     kode: '',
@@ -240,32 +243,56 @@ export default function MasterPembeli() {
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold text-gray-900">Master Data Pembeli</h1>
+    <div
+      className="space-y-6"
+      style={{
+        background: theme.backgroundColor,
+        color: theme.fontColor,
+        fontFamily: theme.fontFamily,
+        minHeight: "100vh",
+        padding: 24,
+      }}
+    >
+      <h1 className="text-2xl font-bold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+        Master Data Pembeli
+      </h1>
       
       {/* Tab Navigation */}
       <div className="flex space-x-2 mb-4">
-        <button type="button" onClick={() => setActiveTab("utama")}
-          className={`px-4 py-2 rounded-t ${activeTab === "utama" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}>Data Utama</button>
-        <button type="button" onClick={() => setActiveTab("alamat")}
-          className={`px-4 py-2 rounded-t ${activeTab === "alamat" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}>Alamat & Kontak</button>
-        <button type="button" onClick={() => setActiveTab("bank")}
-          className={`px-4 py-2 rounded-t ${activeTab === "bank" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}>Bank & Pajak</button>
-        <button type="button" onClick={() => setActiveTab("term")}
-          className={`px-4 py-2 rounded-t ${activeTab === "term" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}>Term, Limit & Diskon</button>
+        {["utama", "alamat", "bank", "term"].map(tab => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className="px-4 py-2 rounded-t font-semibold transition"
+            style={{
+              background: activeTab === tab ? theme.buttonSimpan : theme.cardColor,
+              color: activeTab === tab ? "#fff" : theme.fontColor,
+              fontFamily: theme.fontFamily,
+              border: activeTab === tab ? `2px solid ${theme.buttonSimpan}` : "none",
+            }}
+          >
+            {tab === "utama" && "Data Utama"}
+            {tab === "alamat" && "Alamat & Kontak"}
+            {tab === "bank" && "Bank & Pajak"}
+            {tab === "term" && "Term, Limit & Diskon"}
+          </button>
+        ))}
       </div>
 
       {/* Form Input */}
-      <Card>
+      <Card style={{ background: theme.cardColor }}>
         <CardHeader>
-          <CardTitle>{editingId ? 'Edit Pembeli' : 'Tambah Pembeli Baru'}</CardTitle>
+          <CardTitle style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+            {editingId ? 'Edit Pembeli' : 'Tambah Pembeli Baru'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {activeTab === "utama" && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Kode Pembeli *
                   </label>
                   <Input
@@ -275,12 +302,18 @@ export default function MasterPembeli() {
                     onChange={handleInputChange}
                     placeholder="Contoh: CUST001"
                     className={errors.kode ? 'border-red-500' : ''}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                   {errors.kode && <p className="text-red-500 text-xs mt-1">{errors.kode}</p>}
                 </div>
                 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Nama Pembeli *
                   </label>
                   <Input
@@ -290,12 +323,18 @@ export default function MasterPembeli() {
                     onChange={handleInputChange}
                     placeholder="Nama lengkap pembeli/customer"
                     className={errors.nama ? 'border-red-500' : ''}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                   {errors.nama && <p className="text-red-500 text-xs mt-1">{errors.nama}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Jenis Customer *
                   </label>
                   <select
@@ -303,6 +342,12 @@ export default function MasterPembeli() {
                     value={formData.jenisCustomer}
                     onChange={handleInputChange}
                     className={`w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 ${errors.jenisCustomer ? 'border-red-500' : ''}`}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   >
                     <option value="">Pilih jenis customer</option>
                     <option value="Corporate">Corporate</option>
@@ -315,7 +360,7 @@ export default function MasterPembeli() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Status
                   </label>
                   <select
@@ -323,6 +368,12 @@ export default function MasterPembeli() {
                     value={formData.status}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   >
                     <option value="Aktif">Aktif</option>
                     <option value="Tidak Aktif">Tidak Aktif</option>
@@ -330,7 +381,7 @@ export default function MasterPembeli() {
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Keterangan
                   </label>
                   <textarea
@@ -339,6 +390,12 @@ export default function MasterPembeli() {
                     onChange={handleInputChange}
                     rows={2}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
               </div>
@@ -346,7 +403,7 @@ export default function MasterPembeli() {
             {activeTab === "alamat" && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Alamat Lengkap *
                   </label>
                   <Input
@@ -356,11 +413,17 @@ export default function MasterPembeli() {
                     onChange={handleInputChange}
                     placeholder="Alamat lengkap dengan nomor"
                     className={errors.alamatLengkap ? 'border-red-500' : ''}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                   {errors.alamatLengkap && <p className="text-red-500 text-xs mt-1">{errors.alamatLengkap}</p>}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Kota
                   </label>
                   <Input
@@ -369,11 +432,17 @@ export default function MasterPembeli() {
                     value={formData.kota}
                     onChange={handleInputChange}
                     placeholder="Kota"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Kode Pos
                   </label>
                   <Input
@@ -382,11 +451,17 @@ export default function MasterPembeli() {
                     value={formData.kodePos}
                     onChange={handleInputChange}
                     placeholder="12345"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Telepon *
                   </label>
                   <Input
@@ -396,12 +471,18 @@ export default function MasterPembeli() {
                     onChange={handleInputChange}
                     placeholder="021-12345678"
                     className={errors.telepon ? 'border-red-500' : ''}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                   {errors.telepon && <p className="text-red-500 text-xs mt-1">{errors.telepon}</p>}
                 </div>
 
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Email
                   </label>
                   <Input
@@ -411,12 +492,18 @@ export default function MasterPembeli() {
                     onChange={handleInputChange}
                     placeholder="email@pembeli.com"
                     className={errors.email ? 'border-red-500' : ''}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                   {errors.email && <p className="text-red-500 text-xs mt-1">{errors.email}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Contact Person
                   </label>
                   <Input
@@ -425,11 +512,17 @@ export default function MasterPembeli() {
                     value={formData.contactPerson}
                     onChange={handleInputChange}
                     placeholder="Nama kontak person"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Telepon CP
                   </label>
                   <Input
@@ -438,6 +531,12 @@ export default function MasterPembeli() {
                     value={formData.teleponCP}
                     onChange={handleInputChange}
                     placeholder="081234567890"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
               </div>
@@ -445,7 +544,7 @@ export default function MasterPembeli() {
             {activeTab === "bank" && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Nama Bank
                   </label>
                   <Input
@@ -454,11 +553,17 @@ export default function MasterPembeli() {
                     value={formData.namaBank}
                     onChange={handleInputChange}
                     placeholder="Bank Mandiri"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Nomor Rekening
                   </label>
                   <Input
@@ -467,11 +572,17 @@ export default function MasterPembeli() {
                     value={formData.nomorRekening}
                     onChange={handleInputChange}
                     placeholder="1234567890"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Atas Nama
                   </label>
                   <Input
@@ -480,11 +591,17 @@ export default function MasterPembeli() {
                     value={formData.atasNama}
                     onChange={handleInputChange}
                     placeholder="Nama pemilik rekening"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     NPWP
                   </label>
                   <Input
@@ -493,6 +610,12 @@ export default function MasterPembeli() {
                     value={formData.npwp}
                     onChange={handleInputChange}
                     placeholder="01.234.567.8-901.000"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                 </div>
               </div>
@@ -500,7 +623,7 @@ export default function MasterPembeli() {
             {activeTab === "term" && (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Term Pembayaran (Hari)
                   </label>
                   <Input
@@ -511,12 +634,18 @@ export default function MasterPembeli() {
                     placeholder="30"
                     min="0"
                     className={errors.termPembayaran ? 'border-red-500' : ''}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                   {errors.termPembayaran && <p className="text-red-500 text-xs mt-1">{errors.termPembayaran}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Limit Kredit
                   </label>
                   <Input
@@ -526,12 +655,18 @@ export default function MasterPembeli() {
                     onChange={handleInputChange}
                     placeholder="100,000,000"
                     className={errors.limitKredit ? 'border-red-500' : ''}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                   {errors.limitKredit && <p className="text-red-500 text-xs mt-1">{errors.limitKredit}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Diskon (%)
                   </label>
                   <Input
@@ -544,12 +679,18 @@ export default function MasterPembeli() {
                     max="100"
                     step="0.1"
                     className={errors.diskon ? 'border-red-500' : ''}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   />
                   {errors.diskon && <p className="text-red-500 text-xs mt-1">{errors.diskon}</p>}
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                  <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Kategori Harga
                   </label>
                   <select
@@ -557,6 +698,12 @@ export default function MasterPembeli() {
                     value={formData.kategoriHarga}
                     onChange={handleInputChange}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
                   >
                     <option value="Regular">Regular</option>
                     <option value="Corporate">Corporate</option>
@@ -567,11 +714,25 @@ export default function MasterPembeli() {
               </div>
             )}
             <div className="flex gap-2">
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+              <Button
+                type="submit"
+                style={{
+                  background: theme.buttonSimpan,
+                  fontFamily: theme.fontFamily,
+                }}
+              >
                 {editingId ? 'Update' : 'Simpan'}
               </Button>
               {editingId && (
-                <Button type="button" variant="outline" onClick={handleCancel}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  style={{
+                    background: theme.buttonHapus,
+                    fontFamily: theme.fontFamily,
+                  }}
+                >
                   Batal
                 </Button>
               )}
@@ -581,67 +742,77 @@ export default function MasterPembeli() {
       </Card>
 
       {/* Tabel Data */}
-      <Card>
+      <Card style={{ background: theme.cardColor }}>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Data Pembeli</CardTitle>
+            <CardTitle style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Data Pembeli</CardTitle>
             <div className="w-64">
               <Input
                 type="text"
                 placeholder="Cari pembeli..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  background: theme.fieldColor,
+                  color: theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                  borderColor: theme.dropdownColor,
+                }}
               />
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="border border-gray-300 px-4 py-2 text-left">Kode</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Nama Pembeli</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Jenis</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Telepon</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Email</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Term</th>
-                  <th className="border border-gray-300 px-4 py-2 text-right">Limit Kredit</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center">Diskon</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center">Status</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center">Aksi</th>
+            <table className="w-full border-collapse" style={{ fontFamily: theme.tableFontFamily }}>
+              <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
+                <tr>
+                  <th className="px-4 py-2 text-left">Kode</th>
+                  <th className="px-4 py-2 text-left">Nama Pembeli</th>
+                  <th className="px-4 py-2 text-left">Jenis</th>
+                  <th className="px-4 py-2 text-left">Telepon</th>
+                  <th className="px-4 py-2 text-left">Email</th>
+                  <th className="px-4 py-2 text-left">Term</th>
+                  <th className="px-4 py-2 text-right">Limit Kredit</th>
+                  <th className="px-4 py-2 text-center">Diskon</th>
+                  <th className="px-4 py-2 text-center">Status</th>
+                  <th className="px-4 py-2 text-center">Aksi</th>
                 </tr>
               </thead>
               <tbody>
                 {paginatedData.length > 0 ? (
                   paginatedData.map((item) => (
-                    <tr key={item.id} className="hover:bg-gray-50">
-                      <td className="border border-gray-300 px-4 py-2">{item.kode}</td>
-                      <td className="border border-gray-300 px-4 py-2">{item.nama}</td>
-                      <td className="border border-gray-300 px-4 py-2">{item.jenisCustomer}</td>
-                      <td className="border border-gray-300 px-4 py-2">{item.telepon}</td>
-                      <td className="border border-gray-300 px-4 py-2">{item.email || '-'}</td>
-                      <td className="border border-gray-300 px-4 py-2">{item.termPembayaran} hari</td>
-                      <td className="border border-gray-300 px-4 py-2 text-right">
-                        Rp {formatCurrency(item.limitKredit)}
-                      </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">{item.diskon}%</td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          item.status === 'Aktif' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-red-100 text-red-800'
-                        }`}>
+                    <tr key={item.id} style={{ background: theme.tableBodyColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>
+                      <td className="px-4 py-2">{item.kode}</td>
+                      <td className="px-4 py-2">{item.nama}</td>
+                      <td className="px-4 py-2">{item.jenisCustomer}</td>
+                      <td className="px-4 py-2">{item.telepon}</td>
+                      <td className="px-4 py-2">{item.email || '-'}</td>
+                      <td className="px-4 py-2">{item.termPembayaran} hari</td>
+                      <td className="px-4 py-2 text-right">Rp {formatCurrency(item.limitKredit)}</td>
+                      <td className="px-4 py-2 text-center">{item.diskon}%</td>
+                      <td className="px-4 py-2 text-center">
+                        <span
+                          className="px-2 py-1 rounded text-xs"
+                          style={{
+                            background: item.status === 'Aktif' ? theme.buttonSimpan : theme.buttonHapus,
+                            color: "#fff",
+                            fontFamily: theme.fontFamily,
+                          }}
+                        >
                           {item.status}
                         </span>
                       </td>
-                      <td className="border border-gray-300 px-4 py-2 text-center">
+                      <td className="px-4 py-2 text-center">
                         <div className="flex gap-1 justify-center">
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => handleEdit(item)}
-                            className="text-blue-600 hover:text-blue-800"
+                            style={{
+                              background: theme.buttonUpdate,
+                              fontFamily: theme.fontFamily,
+                            }}
                           >
                             Edit
                           </Button>
@@ -649,7 +820,11 @@ export default function MasterPembeli() {
                             size="sm"
                             variant="outline"
                             onClick={() => handleDelete(item.id)}
-                            className="text-red-600 hover:text-red-800"
+                            style={{
+                              background: theme.buttonHapus,
+                              color: "#fff",
+                              fontFamily: theme.fontFamily,
+                            }}
                           >
                             Hapus
                           </Button>
@@ -659,7 +834,7 @@ export default function MasterPembeli() {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="10" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                    <td colSpan="10" className="px-4 py-8 text-center" style={{ color: theme.tableFontColor, background: theme.tableBodyColor, fontFamily: theme.tableFontFamily }}>
                       Tidak ada data pembeli
                     </td>
                   </tr>
@@ -676,19 +851,29 @@ export default function MasterPembeli() {
                 size="sm"
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
+                style={{
+                  background: theme.buttonRefresh,
+                  color: "#fff",
+                  fontFamily: theme.fontFamily,
+                  opacity: currentPage === 1 ? 0.5 : 1,
+                }}
               >
                 Sebelumnya
               </Button>
-              
-              <span className="text-sm text-gray-600">
+              <span className="text-sm" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                 Halaman {currentPage} dari {totalPages}
               </span>
-              
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
+                style={{
+                  background: theme.buttonSimpan,
+                  color: "#fff",
+                  fontFamily: theme.fontFamily,
+                  opacity: currentPage === totalPages ? 0.5 : 1,
+                }}
               >
                 Selanjutnya
               </Button>

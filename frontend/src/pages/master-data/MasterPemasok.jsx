@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useTheme } from "../../context/ThemeContext"; // tambahkan ini
 import api from "../../utils/api";
 
 function formatPhone(phone) {
@@ -8,6 +9,7 @@ function formatPhone(phone) {
 }
 
 export default function MasterPemasok() {
+  const { theme } = useTheme(); // gunakan theme
   const [pemasokList, setPemasokList] = useState([]);
   const [formData, setFormData] = useState({
     kode: "",
@@ -209,34 +211,45 @@ export default function MasterPemasok() {
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6" style={{ background: theme.backgroundColor, color: theme.fontColor, fontFamily: theme.fontFamily }}>
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800 mb-2">Master Data Pemasok</h1>
-        <p className="text-gray-600">Kelola data vendor/supplier perusahaan</p>
+        <h1 className="text-2xl font-bold mb-2" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Master Data Pemasok</h1>
+        <p style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Kelola data vendor/supplier perusahaan</p>
       </div>
 
       {/* Tab Navigation */}
       <div className="flex space-x-2 mb-4">
-        <button type="button" onClick={() => setActiveTab("utama")}
-          className={`px-4 py-2 rounded-t ${activeTab === "utama" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}>Data Utama</button>
-        <button type="button" onClick={() => setActiveTab("alamat")}
-          className={`px-4 py-2 rounded-t ${activeTab === "alamat" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}>Alamat & Kontak</button>
-        <button type="button" onClick={() => setActiveTab("bank")}
-          className={`px-4 py-2 rounded-t ${activeTab === "bank" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}>Bank & Pajak</button>
-        <button type="button" onClick={() => setActiveTab("term")}
-          className={`px-4 py-2 rounded-t ${activeTab === "term" ? "bg-indigo-600 text-white" : "bg-gray-100 text-gray-700"}`}>Term & Limit</button>
+        {["utama", "alamat", "bank", "term"].map(tab => (
+          <button
+            key={tab}
+            type="button"
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 rounded-t font-semibold transition`}
+            style={{
+              background: activeTab === tab ? theme.buttonSimpan : theme.cardColor,
+              color: activeTab === tab ? "#fff" : theme.fontColor,
+              fontFamily: theme.fontFamily,
+              border: activeTab === tab ? `2px solid ${theme.buttonSimpan}` : "none",
+            }}
+          >
+            {tab === "utama" && "Data Utama"}
+            {tab === "alamat" && "Alamat & Kontak"}
+            {tab === "bank" && "Bank & Pajak"}
+            {tab === "term" && "Term & Limit"}
+          </button>
+        ))}
       </div>
 
       {/* Form Input */}
-      <div className="bg-white rounded-lg shadow p-6 mb-6">
-        <h2 className="text-lg font-semibold mb-4">
+      <div className="rounded-lg shadow p-6 mb-6" style={{ background: theme.cardColor }}>
+        <h2 className="text-lg font-semibold mb-4" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
           {editingId ? "Edit Data Pemasok" : "Tambah Data Pemasok"}
         </h2>
         <form onSubmit={handleSubmit} className="space-y-4">
           {activeTab === "utama" && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Kode Pemasok *
                 </label>
                 <input
@@ -245,11 +258,17 @@ export default function MasterPemasok() {
                   value={formData.kode}
                   onChange={handleInputChange}
                   placeholder={generateKodePemasok()}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Nama Pemasok *
                 </label>
                 <input
@@ -258,11 +277,17 @@ export default function MasterPemasok() {
                   value={formData.nama}
                   onChange={handleInputChange}
                   required
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Jenis Usaha
                 </label>
                 <input
@@ -271,25 +296,37 @@ export default function MasterPemasok() {
                   value={formData.jenisUsaha}
                   onChange={handleInputChange}
                   placeholder="Misal: Distributor, Manufaktur, dll"
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Status
                 </label>
                 <select
                   name="status"
                   value={formData.status}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 >
                   <option value="Aktif">Aktif</option>
                   <option value="Tidak Aktif">Tidak Aktif</option>
                 </select>
               </div>
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Keterangan
                 </label>
                 <textarea
@@ -297,7 +334,13 @@ export default function MasterPemasok() {
                   value={formData.keterangan}
                   onChange={handleInputChange}
                   rows="2"
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
             </div>
@@ -305,7 +348,7 @@ export default function MasterPemasok() {
           {activeTab === "alamat" && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Alamat *
                 </label>
                 <textarea
@@ -314,11 +357,17 @@ export default function MasterPemasok() {
                   onChange={handleInputChange}
                   required
                   rows="3"
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Kota
                 </label>
                 <input
@@ -326,11 +375,17 @@ export default function MasterPemasok() {
                   name="kota"
                   value={formData.kota}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Provinsi
                 </label>
                 <input
@@ -338,11 +393,17 @@ export default function MasterPemasok() {
                   name="provinsi"
                   value={formData.provinsi}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Kode Pos
                 </label>
                 <input
@@ -350,11 +411,17 @@ export default function MasterPemasok() {
                   name="kodePos"
                   value={formData.kodePos}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Negara
                 </label>
                 <input
@@ -362,11 +429,17 @@ export default function MasterPemasok() {
                   name="negara"
                   value={formData.negara}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Telepon *
                 </label>
                 <input
@@ -375,11 +448,17 @@ export default function MasterPemasok() {
                   value={formData.telepon}
                   onChange={handleInputChange}
                   required
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Fax
                 </label>
                 <input
@@ -387,11 +466,17 @@ export default function MasterPemasok() {
                   name="fax"
                   value={formData.fax}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Email
                 </label>
                 <input
@@ -399,11 +484,17 @@ export default function MasterPemasok() {
                   name="email"
                   value={formData.email}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Website
                 </label>
                 <input
@@ -411,11 +502,17 @@ export default function MasterPemasok() {
                   name="website"
                   value={formData.website}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Contact Person
                 </label>
                 <input
@@ -423,11 +520,17 @@ export default function MasterPemasok() {
                   name="contactPerson"
                   value={formData.contactPerson}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Jabatan Contact
                 </label>
                 <input
@@ -435,11 +538,17 @@ export default function MasterPemasok() {
                   name="jabatanContact"
                   value={formData.jabatanContact}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Telepon Contact
                 </label>
                 <input
@@ -447,11 +556,17 @@ export default function MasterPemasok() {
                   name="teleponContact"
                   value={formData.teleponContact}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Email Contact
                 </label>
                 <input
@@ -459,7 +574,13 @@ export default function MasterPemasok() {
                   name="emailContact"
                   value={formData.emailContact}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
             </div>
@@ -467,7 +588,7 @@ export default function MasterPemasok() {
           {activeTab === "bank" && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Nama Bank
                 </label>
                 <input
@@ -475,11 +596,17 @@ export default function MasterPemasok() {
                   name="bank"
                   value={formData.bank}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   No. Rekening
                 </label>
                 <input
@@ -487,11 +614,17 @@ export default function MasterPemasok() {
                   name="noRekening"
                   value={formData.noRekening}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Nama Rekening
                 </label>
                 <input
@@ -499,11 +632,17 @@ export default function MasterPemasok() {
                   name="namaRekening"
                   value={formData.namaRekening}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   NPWP
                 </label>
                 <input
@@ -511,7 +650,13 @@ export default function MasterPemasok() {
                   name="npwp"
                   value={formData.npwp}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
             </div>
@@ -519,7 +664,7 @@ export default function MasterPemasok() {
           {activeTab === "term" && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Term Pembayaran (hari)
                 </label>
                 <input
@@ -527,11 +672,17 @@ export default function MasterPemasok() {
                   name="termPembayaran"
                   value={formData.termPembayaran}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Limit Kredit
                 </label>
                 <input
@@ -539,11 +690,17 @@ export default function MasterPemasok() {
                   name="limitKredit"
                   value={formData.limitKredit}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Mata Uang
                 </label>
                 <input
@@ -551,7 +708,13 @@ export default function MasterPemasok() {
                   name="mata_uang"
                   value={formData.mata_uang}
                   onChange={handleInputChange}
-                  className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:border-indigo-500"
+                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
               </div>
             </div>
@@ -559,14 +722,24 @@ export default function MasterPemasok() {
           <div className="flex gap-2 mt-4">
             <button
               type="submit"
-              className="bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700"
+              className="px-4 py-2 rounded font-semibold"
+              style={{
+                background: theme.buttonSimpan,
+                color: "#fff",
+                fontFamily: theme.fontFamily,
+              }}
             >
               {editingId ? "Update" : "Simpan"}
             </button>
             {editingId && (
               <button
                 type="button"
-                className="border px-4 py-2 rounded"
+                className="px-4 py-2 rounded font-semibold"
+                style={{
+                  background: theme.buttonHapus,
+                  color: "#fff",
+                  fontFamily: theme.fontFamily,
+                }}
                 onClick={resetForm}
               >
                 Batal
@@ -577,23 +750,28 @@ export default function MasterPemasok() {
       </div>
 
       {/* Search and Table */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="rounded-lg shadow p-6" style={{ background: theme.cardColor }}>
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Daftar Pemasok</h2>
+          <h2 className="text-lg font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Daftar Pemasok</h2>
           <div className="flex gap-2">
             <input
               type="text"
               placeholder="Cari pemasok..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="border border-gray-300 rounded px-3 py-2 w-64"
+              className="border rounded px-3 py-2 w-64"
+              style={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+                borderColor: theme.dropdownColor,
+              }}
             />
           </div>
         </div>
-
         <div className="overflow-x-auto">
-          <table className="min-w-full border text-sm">
-            <thead className="bg-gray-50">
+          <table className="min-w-full border text-sm" style={{ fontFamily: theme.tableFontFamily }}>
+            <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
               <tr>
                 <th className="p-3 border text-left">Kode</th>
                 <th className="p-3 border text-left">Nama Pemasok</th>
@@ -609,13 +787,13 @@ export default function MasterPemasok() {
             <tbody>
               {paginatedPemasok.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="p-4 text-center text-gray-500">
+                  <td colSpan={9} className="p-4 text-center" style={{ color: theme.tableFontColor, background: theme.tableBodyColor, fontFamily: theme.tableFontFamily }}>
                     Tidak ada data pemasok
                   </td>
                 </tr>
               ) : (
                 paginatedPemasok.map((pemasok) => (
-                  <tr key={pemasok.id} className="hover:bg-gray-50">
+                  <tr key={pemasok.id} className="hover:bg-indigo-50" style={{ background: theme.tableBodyColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>
                     <td className="p-3 border">{pemasok.kode}</td>
                     <td className="p-3 border font-medium">{pemasok.nama}</td>
                     <td className="p-3 border">{pemasok.jenisUsaha || "-"}</td>
@@ -623,7 +801,7 @@ export default function MasterPemasok() {
                       <div>
                         <div>{formatPhone(pemasok.telepon)}</div>
                         {pemasok.email && (
-                          <div className="text-xs text-gray-600">{pemasok.email}</div>
+                          <div className="text-xs" style={{ color: theme.tableFontColor }}>{pemasok.email}</div>
                         )}
                       </div>
                     </td>
@@ -631,7 +809,7 @@ export default function MasterPemasok() {
                       <div className="max-w-xs">
                         <div>{pemasok.alamat}</div>
                         {pemasok.kota && (
-                          <div className="text-xs text-gray-600">
+                          <div className="text-xs" style={{ color: theme.tableFontColor }}>
                             {pemasok.kota}, {pemasok.provinsi}
                           </div>
                         )}
@@ -644,11 +822,11 @@ export default function MasterPemasok() {
                       {formatCurrency(pemasok.limitKredit)}
                     </td>
                     <td className="p-3 border">
-                      <span className={`px-2 py-1 rounded text-xs ${
-                        pemasok.status === "Aktif" 
-                          ? "bg-green-100 text-green-800" 
-                          : "bg-red-100 text-red-800"
-                      }`}>
+                      <span className="px-2 py-1 rounded text-xs" style={{
+                        background: pemasok.status === "Aktif" ? theme.buttonSimpan : theme.buttonHapus,
+                        color: "#fff",
+                        fontFamily: theme.fontFamily,
+                      }}>
                         {pemasok.status}
                       </span>
                     </td>
@@ -656,13 +834,23 @@ export default function MasterPemasok() {
                       <div className="flex gap-1 justify-center">
                         <button
                           onClick={() => handleEdit(pemasok)}
-                          className="bg-blue-500 text-white px-3 py-1 rounded text-xs hover:bg-blue-600"
+                          className="px-3 py-1 rounded text-xs font-semibold"
+                          style={{
+                            background: theme.buttonEdit,
+                            color: "#fff",
+                            fontFamily: theme.fontFamily,
+                          }}
                         >
                           Edit
                         </button>
                         <button
                           onClick={() => handleDelete(pemasok.id)}
-                          className="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600"
+                          className="px-3 py-1 rounded text-xs font-semibold"
+                          style={{
+                            background: theme.buttonHapus,
+                            color: "#fff",
+                            fontFamily: theme.fontFamily,
+                          }}
                         >
                           Hapus
                         </button>
@@ -674,25 +862,36 @@ export default function MasterPemasok() {
             </tbody>
           </table>
         </div>
-
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-between items-center mt-4">
-            <span className="text-sm text-gray-600">
+            <span className="text-sm" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
               Halaman {currentPage} dari {totalPages} (Total: {filteredPemasok.length} data)
             </span>
             <div className="flex gap-2">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                 disabled={currentPage === 1}
-                className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                className="px-3 py-1 rounded border font-semibold"
+                style={{
+                  background: theme.buttonRefresh,
+                  color: "#fff",
+                  fontFamily: theme.fontFamily,
+                  opacity: currentPage === 1 ? 0.5 : 1,
+                }}
               >
                 Prev
               </button>
               <button
                 onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                 disabled={currentPage === totalPages}
-                className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200 disabled:opacity-50"
+                className="px-3 py-1 rounded border font-semibold"
+                style={{
+                  background: theme.buttonSimpan,
+                  color: "#fff",
+                  fontFamily: theme.fontFamily,
+                  opacity: currentPage === totalPages ? 0.5 : 1,
+                }}
               >
                 Next
               </button>

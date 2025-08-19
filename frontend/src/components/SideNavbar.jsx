@@ -176,10 +176,15 @@ export default function SideNavbar({ onClose }) {
   return (
     <aside
       className="w-64 min-h-screen shadow-lg flex flex-col bg-white relative"
-      style={{ background: theme.cardColor, color: theme.fontColor }}
+      style={{
+        background: theme.cardColor,
+        color: theme.fontColor,
+        overflowY: "auto", // tambahkan ini
+        height: "100vh",   // tambahkan ini agar sidebar selalu penuh
+      }}
     >
       {/* Tombol close */}
-      {onClose && (
+      {/* {onClose && (
         <button
           className="absolute top-2 right-2 bg-gray-100 rounded-full p-1"
           onClick={onClose}
@@ -189,7 +194,7 @@ export default function SideNavbar({ onClose }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-      )}
+      )} */}
 
       <nav className="flex-1 flex flex-col gap-1 px-2 mt-4">
         {navItems.map((item, idx) =>

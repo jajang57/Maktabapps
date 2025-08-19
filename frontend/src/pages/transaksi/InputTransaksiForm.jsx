@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import api from "../../utils/api";
 import { useAuth } from "../../context/AuthContext";
+import { useTheme } from "../../context/ThemeContext"; // pastikan sudah di-import
 
 // Tambahkan fungsi untuk mendapatkan tanggal hari ini dalam format YYYY-MM-DD
 function getTodayLocal() {
@@ -41,6 +42,7 @@ function parseFormattedNumber(value) {
 
 const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
   const { user } = useAuth(); // ✅ FIXED: Add this line
+  const { theme } = useTheme(); // tambahkan ini
 
   const [form, setForm] = useState({
     coaAkunBank: "",
@@ -610,14 +612,25 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
     <>
       {/* Header indikator mode */}
       {isEditMode && (
-        <div className="bg-orange-100 border border-orange-400 text-orange-700 px-4 py-3 rounded mb-4">
+        <div className="border px-4 py-3 rounded mb-4"
+          style={{
+            background: theme.cardColor,
+            color: theme.fontColor,
+            fontFamily: theme.fontFamily,
+            borderColor: theme.buttonEdit,
+          }}
+        >
           <div className="flex justify-between items-center">
             <span>
               <strong>Mode Edit:</strong> Mengedit transaksi ID #{selectedTransaksiId}
             </span>
             <button
               onClick={handleResetForm}
-              className="text-orange-700 hover:text-orange-900 font-bold"
+              style={{
+                color: theme.buttonHapus,
+                fontWeight: "bold",
+                fontFamily: theme.fontFamily,
+              }}
             >
               ✕
             </button>
@@ -625,17 +638,32 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
         </div>
       )}
       
-      <form className="space-y-4 w-full bg-white rounded shadow p-6 mt-4" onSubmit={handleSubmit}>
+      <form
+        className="space-y-4 w-full rounded shadow p-6 mt-4"
+        style={{
+          background: theme.formColor,
+          color: theme.fontColor,
+          fontFamily: theme.fontFamily,
+        }}
+        onSubmit={handleSubmit}
+      >
         {/* Baris 1: COA Akun Bank & Nomor Transaksi */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block mb-1 font-medium">COA Akun Bank</label>
+            <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+              COA Akun Bank
+            </label>
             <select
               name="coaAkunBank"
               value={form.coaAkunBank}
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
               required
+              style={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             >
               <option value="">Pilih COA Akun Bank</option>
               {coaList.map(coa => (
@@ -646,25 +674,35 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
             </select>
           </div>
           <div>
-            <label className="block mb-1 font-medium">Nomor Transaksi</label>
+            <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+              Nomor Transaksi
+            </label>
             <div className="flex gap-2">
               <input
                 type="text"
                 name="noTransaksi"
                 value={form.noTransaksi}
                 onChange={handleChange}
-                className={`flex-1 border rounded px-3 py-2 ${
-                  isEditMode ? "" : "bg-gray-100"
-                }`}
+                className={`flex-1 border rounded px-3 py-2`}
                 placeholder={isEditMode ? "Edit nomor transaksi" : "Auto Generated"}
                 readOnly={!isEditMode}
+                style={{
+                  background: theme.fieldColor,
+                  color: theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                }}
               />
               {!isEditMode && (
                 <button
                   type="button"
                   onClick={generateNoTransaksi}
                   disabled={!form.coaAkunBank || !form.tanggal || isGeneratingNoTransaksi}
-                  className="bg-blue-500 text-white px-3 py-2 rounded hover:bg-blue-600 disabled:bg-gray-400"
+                  style={{
+                    background: theme.buttonEdit,
+                    color: "#fff",
+                    fontFamily: theme.fontFamily,
+                  }}
+                  className="px-3 py-2 rounded"
                 >
                   {isGeneratingNoTransaksi ? "..." : "Auto"}
                 </button>
@@ -676,7 +714,9 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
         {/* Baris 2: Tanggal, Akun Transaksi, Debit, Kredit */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block mb-1 font-medium">Tanggal</label>
+            <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+              Tanggal
+            </label>
             <input
               type="date"
               name="tanggal"
@@ -684,16 +724,28 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
               required
+              style={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             />
           </div>
           <div>
-            <label className="block mb-1 font-medium">Akun Transaksi</label>
+            <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+              Akun Transaksi
+            </label>
             <select
               name="akunTransaksi"
               value={form.akunTransaksi}
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
               required
+              style={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             >
               <option value="">Pilih Akun Transaksi</option>
               {akunTransaksiOptions.map(opt => (
@@ -703,17 +755,9 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               ))}
             </select>
           </div>
-          
-          {/* ✅ FIXED: Input Debit */}
           <div>
-            <label className="block mb-1 font-medium">
+            <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
               Debit
-              {form.debit && form.debit !== "0" && (
-                <span className="text-green-600 text-sm ml-1">(Aktif)</span>
-              )}
-              {form.kredit && form.kredit !== "0" && (
-                <span className="text-gray-500 text-sm ml-1">(Disabled)</span>
-              )}
             </label>
             <div className="flex gap-2">
               <input
@@ -724,14 +768,13 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
                 onBlur={handleDebitBlur}
                 onFocus={handleDebitFocus}
                 disabled={form.kredit && form.kredit !== "0"}
-                className={`flex-1 border rounded px-3 py-2 ${
-                  form.kredit && form.kredit !== "0" 
-                    ? "bg-gray-100 cursor-not-allowed text-gray-500" 
-                    : form.debit && form.debit !== "0"
-                    ? "border-green-500 bg-green-50"
-                    : ""
-                }`}
+                className="flex-1 border rounded px-3 py-2"
                 placeholder="0"
+                style={{
+                  background: theme.fieldColor,
+                  color: theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                }}
               />
               {form.debit && form.debit !== "0" && (
                 <button
@@ -740,7 +783,12 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
                     setForm({...form, debit: ""});
                     setFormattedDebit("");
                   }}
-                  className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
+                  style={{
+                    background: theme.buttonHapus,
+                    color: "#fff",
+                    fontFamily: theme.fontFamily,
+                  }}
+                  className="px-2 py-1 rounded text-sm"
                   title="Clear Debit"
                 >
                   ✕
@@ -748,17 +796,9 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
               )}
             </div>
           </div>
-          
-          {/* ✅ FIXED: Input Kredit */}
           <div>
-            <label className="block mb-1 font-medium">
+            <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
               Kredit
-              {form.kredit && form.kredit !== "0" && (
-                <span className="text-green-600 text-sm ml-1">(Aktif)</span>
-              )}
-              {form.debit && form.debit !== "0" && (
-                <span className="text-gray-500 text-sm ml-1">(Disabled)</span>
-              )}
             </label>
             <div className="flex gap-2">
               <input
@@ -769,14 +809,13 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
                 onBlur={handleKreditBlur}
                 onFocus={handleKreditFocus}
                 disabled={form.debit && form.debit !== "0"}
-                className={`flex-1 border rounded px-3 py-2 ${
-                  form.debit && form.debit !== "0" 
-                    ? "bg-gray-100 cursor-not-allowed text-gray-500" 
-                    : form.kredit && form.kredit !== "0"
-                    ? "border-green-500 bg-green-50"
-                    : ""
-                }`}
+                className="flex-1 border rounded px-3 py-2"
                 placeholder="0"
+                style={{
+                  background: theme.fieldColor,
+                  color: theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                }}
               />
               {form.kredit && form.kredit !== "0" && (
                 <button
@@ -785,7 +824,12 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
                     setForm({...form, kredit: ""});
                     setFormattedKredit("");
                   }}
-                  className="bg-red-500 text-white px-2 py-1 rounded text-sm hover:bg-red-600"
+                  style={{
+                    background: theme.buttonHapus,
+                    color: "#fff",
+                    fontFamily: theme.fontFamily,
+                  }}
+                  className="px-2 py-1 rounded text-sm"
                   title="Clear Kredit"
                 >
                   ✕
@@ -795,9 +839,11 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
           </div>
         </div>
 
-        {/* Baris 3: Deskripsi (Full Width) */}
+        {/* Baris 3: Deskripsi */}
         <div>
-          <label className="block mb-1 font-medium">Deskripsi</label>
+          <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+            Deskripsi
+          </label>
           <input
             type="text"
             name="deskripsi"
@@ -805,37 +851,55 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
             onChange={handleChange}
             className="w-full border rounded px-3 py-2"
             required
+            style={{
+              background: theme.fieldColor,
+              color: theme.fontColor,
+              fontFamily: theme.fontFamily,
+            }}
           />
         </div>
 
         {/* Baris 4: Project No & Project Name */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block mb-1 font-medium">Project No</label>
+            <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+              Project No
+            </label>
             <select
               name="projectNo"
               value={form.projectNo}
               onChange={handleChange}
               className="w-full border rounded px-3 py-2"
+              style={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             >
               <option value="">Pilih Project</option>
               {renderProjectOptions()}
             </select>
-            {/* Debug info di bawah dropdown */}
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="text-xs mt-1" style={{ color: theme.fontColor }}>
               Projects loaded: {projectList.length}
             </div>
           </div>
           <div>
-            <label className="block mb-1 font-medium">Project Name</label>
+            <label className="block mb-1 font-medium" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+              Project Name
+            </label>
             <input
               type="text"
               name="projectName"
               value={form.projectName}
               onChange={handleChange}
-              className="w-full border rounded px-3 py-2 bg-gray-100"
+              className="w-full border rounded px-3 py-2"
               placeholder="Nama project akan terisi otomatis"
               readOnly
+              style={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             />
           </div>
         </div>
@@ -844,17 +908,23 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
         <div className="flex gap-2 justify-end mt-4">
           <button
             type="submit"
-            className={`px-6 py-2 rounded text-white ${
-              isEditMode 
-                ? "bg-orange-500 hover:bg-orange-600" 
-                : "bg-indigo-500 hover:bg-indigo-600"
-            }`}
+            style={{
+              background: isEditMode ? theme.buttonEdit : theme.buttonSimpan,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+            }}
+            className="px-6 py-2 rounded"
           >
             {isEditMode ? "Update" : "Simpan"}
           </button>
           <button
             type="button"
-            className="bg-red-500 text-white px-6 py-2 rounded hover:bg-red-600"
+            style={{
+              background: theme.buttonHapus,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+            }}
+            className="px-6 py-2 rounded"
             onClick={handleDeleteTransaksi}
             disabled={!isEditMode || !selectedTransaksiId}
             title={!isEditMode ? "Pilih transaksi dengan double-click untuk menghapus" : "Hapus transaksi yang dipilih"}
@@ -863,7 +933,12 @@ const InputTransaksiForm = forwardRef(({ onCOAChange, afterSubmit }, ref) => {
           </button>
           <button
             type="button"
-            className="bg-gray-400 text-white px-6 py-2 rounded hover:bg-gray-500"
+            style={{
+              background: theme.buttonRefresh,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+            }}
+            className="px-6 py-2 rounded"
             onClick={handleResetForm}
           >
             Kosongkan

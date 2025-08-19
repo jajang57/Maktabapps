@@ -21,6 +21,7 @@ import api from "../../utils/api";
 import { FiPrinter } from "react-icons/fi";
 import { FaFileExcel } from "react-icons/fa";
 import { AiFillFilePdf } from "react-icons/ai";
+import { useTheme } from "../../context/ThemeContext";
 
 function formatNumber(num) {
   if (!num || isNaN(num)) return "-";
@@ -42,6 +43,7 @@ function formatDate(dateStr) {
 }
 
 export default function BukuBesar() {
+  const { theme } = useTheme();
   const [coaList, setCoaList] = useState([]);
   const [selectedCoa, setSelectedCoa] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -196,26 +198,30 @@ export default function BukuBesar() {
     overflowX: "auto",
     borderRadius: 8,
     boxShadow: 3,
-    background: "#fff",
+    background: theme.cardColor,
   };
 
   return (
-    <Box sx={{ p: { xs: 1, md: 3 }, width: "100%", background: "#f9fafb" }}>
+    <Box sx={{ p: { xs: 1, md: 3 }, width: "100%", background: theme.backgroundColor, color: theme.fontColor, fontFamily: theme.fontFamily }}>
     {/* Tombol export dan print sejajar dengan filter */}
-    <Paper sx={{ p: 2, mb: 3, borderRadius: 3, boxShadow: 2 }}>
+    <Paper sx={{ p: 2, mb: 3, borderRadius: 3, boxShadow: 2, background: theme.cardColor }}>
       <Grid container spacing={2} alignItems="center">
         <Grid item xs={12} md={4}>
           <FormControl fullWidth size="small">
-            <InputLabel>Pilih Akun COA</InputLabel>
+            <InputLabel sx={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Pilih Akun COA</InputLabel>
             <Select
               value={selectedCoa}
               label="Pilih Akun COA"
               onChange={e => setSelectedCoa(e.target.value)}
+              sx={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             >
-              <MenuItem value="">Semua Akun</MenuItem>
-
+              <MenuItem value="" sx={{ fontFamily: theme.fontFamily }}>Semua Akun</MenuItem>
               {sortedCoaList.map(coa => (
-                <MenuItem key={coa.kode} value={coa.kode}>
+                <MenuItem key={coa.kode} value={coa.kode} sx={{ fontFamily: theme.fontFamily }}>
                   {coa.kode} - {coa.nama}
                 </MenuItem>
               ))}
@@ -228,9 +234,17 @@ export default function BukuBesar() {
             type="date"
             size="small"
             fullWidth
-            InputLabelProps={{ shrink: true }}
+            InputLabelProps={{ shrink: true, style: { color: theme.fontColor, fontFamily: theme.fontFamily } }}
             value={startDate}
             onChange={e => setStartDate(e.target.value)}
+            sx={{
+              background: theme.fieldColor,
+              color: theme.fontColor,
+              fontFamily: theme.fontFamily,
+            }}
+            inputProps={{
+              style: { color: theme.fontColor, fontFamily: theme.fontFamily }
+            }}
           />
         </Grid>
         <Grid item xs={6} md={3}>
@@ -239,17 +253,29 @@ export default function BukuBesar() {
             type="date"
             size="small"
             fullWidth
-            InputLabelProps={{ shrink: true }}
+            InputLabelProps={{ shrink: true, style: { color: theme.fontColor, fontFamily: theme.fontFamily } }}
             value={endDate}
             onChange={e => setEndDate(e.target.value)}
+            sx={{
+              background: theme.fieldColor,
+              color: theme.fontColor,
+              fontFamily: theme.fontFamily,
+            }}
+            inputProps={{
+              style: { color: theme.fontColor, fontFamily: theme.fontFamily }
+            }}
           />
         </Grid>
         <Grid item xs={12} md={2} sx={{ display: 'flex', gap: 1 }}>
           <Button
             variant="contained"
-            color="primary"
             fullWidth
-            sx={{ height: 40 }}
+            sx={{
+              height: 40,
+              background: theme.buttonSimpan,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+            }}
             onClick={fetchData}
             disabled={loading}
           >
@@ -261,31 +287,43 @@ export default function BukuBesar() {
           <Button
             onClick={handlePrint}
             variant="contained"
-            color="primary"
             startIcon={<FiPrinter />}
+            sx={{
+              background: theme.buttonSimpan,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+            }}
           >
             Print Preview
           </Button>
           <Button
             onClick={handleExportPDF}
             variant="contained"
-            color="error"
             startIcon={<AiFillFilePdf />}
+            sx={{
+              background: theme.buttonHapus,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+            }}
           >
             Export PDF
           </Button>
           <Button
             onClick={handleExportExcel}
             variant="contained"
-            color="success"
             startIcon={<FaFileExcel />}
+            sx={{
+              background: theme.buttonEdit,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+            }}
           >
             Export Excel
           </Button>
         </Grid>
       </Grid>
     </Paper>
-    <Typography variant="h5" fontWeight="bold" mb={3} color="#1976d2">
+    <Typography variant="h5" fontWeight="bold" mb={3} sx={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
       {(() => {
         if (!selectedCoa) return 'Buku Besar';
         const coa = coaList.find(c => c.kode === selectedCoa);
@@ -295,48 +333,49 @@ export default function BukuBesar() {
     </Typography>
       {error && <Box color="error.main" mb={2}>{error}</Box>}
       <div ref={printRef}>
-      <TableContainer component={Paper} sx={tableContainerStyle}>
-        <Table stickyHeader size="small" sx={{ minWidth: 700 }}>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ fontWeight: "bold", background: "#e3f2fd", color: "#1976d2" }}>Tanggal</TableCell>
-              <TableCell sx={{ fontWeight: "bold", background: "#e3f2fd", color: "#1976d2" }}>Nomor Transaksi</TableCell>
-              <TableCell sx={{ fontWeight: "bold", background: "#e3f2fd", color: "#1976d2" }}>Deskripsi</TableCell>
-              <TableCell sx={{ fontWeight: "bold", background: "#e3f2fd", color: "#1976d2" }} align="right">Debit</TableCell>
-              <TableCell sx={{ fontWeight: "bold", background: "#e3f2fd", color: "#1976d2" }} align="right">Kredit</TableCell>
-              <TableCell sx={{ fontWeight: "bold", background: "#e3f2fd", color: "#1976d2" }} align="right">Saldo</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {/* Baris Saldo Awal (freeze di atas) */}
-            {data.length > 0 && (
-              <TableRow sx={{ position: 'sticky', top: 0, background: '#fffbe7', zIndex: 2 }}>
-                <TableCell colSpan={3} sx={{ fontWeight: 'bold', color: '#1976d2' }}>Saldo Awal</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold', color: '#1976d2' }}>
-                  {formatNumber(data[0]?.saldo_awal ?? data[0]?.saldoAwal ?? 0)}
-                </TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold', color: '#1976d2' }}>-</TableCell>
-                <TableCell align="right" sx={{ fontWeight: 'bold', color: '#1976d2' }}>{formatNumber(data[0]?.saldo_awal ?? data[0]?.saldoAwal ?? 0)}</TableCell>
-              </TableRow>
-            )}
-            {data.length === 0 && !loading && (
+        <TableContainer component={Paper} sx={tableContainerStyle}>
+          <Table stickyHeader size="small" sx={{ minWidth: 700, fontFamily: theme.tableFontFamily }}>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={6} align="center">Tidak ada data</TableCell>
+                <TableCell sx={{ fontWeight: "bold", background: theme.tableHeaderColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>Tanggal</TableCell>
+                <TableCell sx={{ fontWeight: "bold", background: theme.tableHeaderColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>Nomor Transaksi</TableCell>
+                <TableCell sx={{ fontWeight: "bold", background: theme.tableHeaderColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>Deskripsi</TableCell>
+                <TableCell sx={{ fontWeight: "bold", background: theme.tableHeaderColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }} align="right">Debit</TableCell>
+                <TableCell sx={{ fontWeight: "bold", background: theme.tableHeaderColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }} align="right">Kredit</TableCell>
+                <TableCell sx={{ fontWeight: "bold", background: theme.tableHeaderColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }} align="right">Saldo</TableCell>
               </TableRow>
-            )}
-            {data.map((row, idx) => (
-              <TableRow key={idx} hover>
-                <TableCell>{formatDate(row.tanggal)}</TableCell>
-                <TableCell>{row.nomorTransaksi}</TableCell>
-                <TableCell>{row.deskripsi}</TableCell>
-                <TableCell align="right">{formatNumber(row.debit)}</TableCell>
-                <TableCell align="right">{formatNumber(row.kredit)}</TableCell>
-                <TableCell align="right">{formatNumber(row.saldo)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+            </TableHead>
+            <TableBody>
+              {data.length > 0 && (
+                <TableRow sx={{ position: 'sticky', top: 0, background: theme.tableBodyColor, zIndex: 2 }}>
+                  <TableCell colSpan={3} sx={{ fontWeight: 'bold', color: theme.tableFontColor, background: theme.tableBodyColor, fontFamily: theme.tableFontFamily }}>Saldo Awal</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold', color: theme.tableFontColor, background: theme.tableBodyColor, fontFamily: theme.tableFontFamily }}>
+                    {formatNumber(data[0]?.saldo_awal ?? data[0]?.saldoAwal ?? 0)}
+                  </TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold', color: theme.tableFontColor, background: theme.tableBodyColor, fontFamily: theme.tableFontFamily }}>-</TableCell>
+                  <TableCell align="right" sx={{ fontWeight: 'bold', color: theme.tableFontColor, background: theme.tableBodyColor, fontFamily: theme.tableFontFamily }}>
+                    {formatNumber(data[0]?.saldo_awal ?? data[0]?.saldoAwal ?? 0)}
+                  </TableCell>
+                </TableRow>
+              )}
+              {data.length === 0 && !loading && (
+                <TableRow>
+                  <TableCell colSpan={6} align="center" sx={{ color: theme.tableFontColor, background: theme.tableBodyColor, fontFamily: theme.tableFontFamily }}>Tidak ada data</TableCell>
+                </TableRow>
+              )}
+              {data.map((row, idx) => (
+                <TableRow key={idx} hover sx={{ background: theme.tableBodyColor }}>
+                  <TableCell sx={{ color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>{formatDate(row.tanggal)}</TableCell>
+                  <TableCell sx={{ color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>{row.nomorTransaksi}</TableCell>
+                  <TableCell sx={{ color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>{row.deskripsi}</TableCell>
+                  <TableCell align="right" sx={{ color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>{formatNumber(row.debit)}</TableCell>
+                  <TableCell align="right" sx={{ color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>{formatNumber(row.kredit)}</TableCell>
+                  <TableCell align="right" sx={{ color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>{formatNumber(row.saldo)}</TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </div>
     </Box>
   );

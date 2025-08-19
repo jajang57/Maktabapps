@@ -1,5 +1,6 @@
 import React, { useRef, useState, useEffect } from "react";
 import { Box, Typography, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, FormControl, InputLabel, Select, MenuItem, Grid } from "@mui/material";
+import { useTheme } from "../../context/ThemeContext"; // tambahkan ini
 import api from "../../utils/api"; // Pastikan path sesuai project kamu
 
 // Nama bulan dan key untuk looping
@@ -32,6 +33,8 @@ function formatNumber(num) {
 }
 
 export default function TrialBalance() {
+  const { theme } = useTheme(); // gunakan theme
+
   // State untuk filter bulan dan tahun
   const [startMonth, setStartMonth] = useState(months[0].key);
   const [endMonth, setEndMonth] = useState(months[0].key);
@@ -157,51 +160,84 @@ export default function TrialBalance() {
   });
 
   return (
-    <Box sx={{ p: { xs: 1, md: 3 }, width: "100%", overflowX: "auto", background: "#f9fafb" }}>
-      <Typography variant="h5" fontWeight="bold" mb={3} color="#1976d2">Trial Balance</Typography>
+    <Box sx={{
+      p: { xs: 1, md: 3 },
+      width: "100%",
+      overflowX: "auto",
+      background: theme.backgroundColor, // gunakan warna background dari theme
+      color: theme.fontColor,
+      fontFamily: theme.fontFamily,
+    }}>
+      <Typography
+        variant="h5"
+        fontWeight="bold"
+        mb={3}
+        sx={{
+          color: theme.fontColor,
+          fontFamily: theme.fontFamily,
+        }}
+      >
+        Trial Balance
+      </Typography>
       {error && <Box color="error.main" mb={2}>{error}</Box>}
       <Grid container spacing={2} mb={2}>
         <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small">
-            <InputLabel>Tahun</InputLabel>
+            <InputLabel sx={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Tahun</InputLabel>
             <Select
               value={year}
               label="Tahun"
               onChange={e => setYear(e.target.value)}
+              sx={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             >
               {years.map(y => (
-                <MenuItem key={y} value={y}>{y}</MenuItem>
+                <MenuItem key={y} value={y} sx={{ fontFamily: theme.fontFamily }}>{y}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Grid>
         <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small">
-            <InputLabel>Bulan Awal</InputLabel>
+            <InputLabel sx={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Bulan Awal</InputLabel>
             <Select
               value={startMonth}
               label="Bulan Awal"
               onChange={e => setStartMonth(e.target.value)}
+              sx={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             >
               {months.map(month => (
-                <MenuItem key={month.key} value={month.key}>{month.name}</MenuItem>
+                <MenuItem key={month.key} value={month.key} sx={{ fontFamily: theme.fontFamily }}>{month.name}</MenuItem>
               ))}
             </Select>
           </FormControl>
         </Grid>
         <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small">
-            <InputLabel>Bulan Akhir</InputLabel>
+            <InputLabel sx={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Bulan Akhir</InputLabel>
             <Select
               value={endMonth}
               label="Bulan Akhir"
               onChange={e => setEndMonth(e.target.value)}
+              sx={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             >
               {months.map((month, idx) => (
                 <MenuItem
                   key={month.key}
                   value={month.key}
                   disabled={months.findIndex(m => m.key === month.key) < startIdx}
+                  sx={{ fontFamily: theme.fontFamily }}
                 >
                   {month.name}
                 </MenuItem>
@@ -214,17 +250,18 @@ export default function TrialBalance() {
         component={Paper}
         sx={{
           maxWidth: "100vw",
-           maxHeight: 800, // tambahkan ini
-    overflowY: "auto", // dan ini
+          maxHeight: 800,
+          overflowY: "auto",
           overflowX: "auto",
           cursor: "grab",
           boxShadow: 3,
           borderRadius: 3,
+          background: theme.cardColor, // gunakan warna card dari theme
         }}
         ref={tableRef}
         onMouseDown={handleMouseDown}
       >
-        <Table stickyHeader sx={{ minWidth: 900, fontSize: 15 }}>
+        <Table stickyHeader sx={{ minWidth: 900, fontSize: 15, fontFamily: theme.tableFontFamily }}>
           <TableHead>
             <TableRow>
               <TableCell
@@ -233,13 +270,14 @@ export default function TrialBalance() {
                   ...stickyCell1,
                   fontWeight: "bold",
                   fontSize: 16,
-                  background: "#e3f2fd",
-                  color: "#1976d2",
+                  background: theme.tableHeaderColor,
+                  color: theme.tableFontColor,
                   borderRight: "2px solid #1976d2",
                   position: "sticky",
                   left: 0,
                   top: 0,
-                  zIndex: 12
+                  zIndex: 12,
+                  fontFamily: theme.tableFontFamily,
                 }}
               >
                 <Box sx={{ display: "flex", alignItems: "center", width: "100%" }}>
@@ -263,14 +301,15 @@ export default function TrialBalance() {
                 sx={{
                   fontWeight: "bold",
                   fontSize: 16,
-                  background: "#e3f2fd",
-                  color: "#1976d2",
+                  background: theme.tableHeaderColor,
+                  color: theme.tableFontColor,
                   minWidth: colWidths.saldo,
                   width: colWidths.saldo,
                   maxWidth: colWidths.saldo,
                   position: "sticky",
                   top: 0,
                   zIndex: 11,
+                  fontFamily: theme.tableFontFamily,
                 }}
               >
                 <Box sx={{ display: "flex", alignItems: "center", justifyContent: "flex-end", width: "100%" }}>
@@ -298,11 +337,12 @@ export default function TrialBalance() {
                     borderRight: idx < filteredMonths.length - 1 ? "3px solid #1976d2" : undefined,
                     fontWeight: "bold",
                     fontSize: 16,
-                    background: "#e3f2fd",
-                    color: "#1976d2",
+                    background: theme.tableHeaderColor,
+                    color: theme.tableFontColor,
                     position: "sticky",
                     top: 0,
                     zIndex: 10,
+                    fontFamily: theme.tableFontFamily,
                   }}
                 >
                   {month.name}
@@ -319,14 +359,15 @@ export default function TrialBalance() {
                       borderRight: (type === "balance" && idx < filteredMonths.length - 1) ? "3px solid #1976d2" : undefined,
                       fontWeight: "bold",
                       fontSize: 16,
-                      background: "#e3f2fd",
-                      color: "#1976d2",
+                      background: theme.tableHeaderColor,
+                      color: theme.tableFontColor,
                       minWidth: colWidths[`${month.key}_${type}`],
                       width: colWidths[`${month.key}_${type}`],
                       maxWidth: colWidths[`${month.key}_${type}`],
                       position: "sticky",
-                      top: 56, // tinggi header baris pertama (bisa disesuaikan jika font/table berubah)
+                      top: 56,
                       zIndex: 11,
+                      fontFamily: theme.tableFontFamily,
                     }}
                   >
                     <Box sx={{ display: "flex", alignItems: "center", justifyContent: "center", width: "100%" }}>
@@ -350,23 +391,34 @@ export default function TrialBalance() {
           </TableHead>
           <TableBody>
             {sortedCoa.map(coa => {
-              // Tentukan apakah kategori akun 2, 3, atau 4
               const isCreditType = ["2", "3", "4"].includes(String(coa.tipeAkun));
-              console.log(coa.TipeAkun, isCreditType);
               return (
                 <TableRow key={coa.kode}>
-                  <TableCell sx={{ ...stickyCell1Body, pl: 2 }}>
+                  <TableCell
+                    sx={{
+                      ...stickyCell1Body,
+                      pl: 2,
+                      fontFamily: theme.tableFontFamily,
+                      background: theme.tableBodyColor, // tambahkan ini
+                      color: theme.tableFontColor,      // tambahkan ini
+                    }}
+                  >
                     {coa.kode} - {coa.nama}
                   </TableCell>
-                  <TableCell align="right">{formatNumber(coa.saldoAwal)}</TableCell>
+                  <TableCell
+                    align="right"
+                    sx={{
+                      fontFamily: theme.tableFontFamily,
+                      background: theme.tableBodyColor, // tambahkan ini
+                      color: theme.tableFontColor,      // tambahkan ini
+                    }}
+                  >
+                    {formatNumber(coa.saldoAwal)}
+                  </TableCell>
                   {filteredMonths.map((month, idx) => {
                     const debit = coa[`${month.key}_debit`] || 0;
                     const kredit = coa[`${month.key}_kredit`] || 0;
-
-                    // Mutasi: rumus sesuai tipe akun
                     const mutasi = isCreditType ? (kredit - debit) : (debit - kredit);
-
-                    // Hitung balance: saldo awal + akumulasi mutasi sampai bulan ini
                     let totalMutasi = 0;
                     for (let i = startIdx; i <= startIdx + idx; i++) {
                       const mKey = months[i].key;
@@ -378,10 +430,46 @@ export default function TrialBalance() {
 
                     return (
                       <React.Fragment key={`${coa.kode}_${month.key}`}>
-                        <TableCell align="right">{formatNumber(debit)}</TableCell>
-                        <TableCell align="right">{formatNumber(kredit)}</TableCell>
-                        <TableCell align="right">{formatNumber(mutasi)}</TableCell>
-                        <TableCell align="right">{formatNumber(balance)}</TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontFamily: theme.tableFontFamily,
+                            background: theme.tableBodyColor, // tambahkan ini
+                            color: theme.tableFontColor,      // tambahkan ini
+                          }}
+                        >
+                          {formatNumber(debit)}
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontFamily: theme.tableFontFamily,
+                            background: theme.tableBodyColor, // tambahkan ini
+                            color: theme.tableFontColor,      // tambahkan ini
+                          }}
+                        >
+                          {formatNumber(kredit)}
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontFamily: theme.tableFontFamily,
+                            background: theme.tableBodyColor, // tambahkan ini
+                            color: theme.tableFontColor,      // tambahkan ini
+                          }}
+                        >
+                          {formatNumber(mutasi)}
+                        </TableCell>
+                        <TableCell
+                          align="right"
+                          sx={{
+                            fontFamily: theme.tableFontFamily,
+                            background: theme.tableBodyColor, // tambahkan ini
+                            color: theme.tableFontColor,      // tambahkan ini
+                          }}
+                        >
+                          {formatNumber(balance)}
+                        </TableCell>
                       </React.Fragment>
                     );
                   })}

@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
+import { useTheme } from "../../context/ThemeContext"; // tambahkan ini
 import api from "../../utils/api";
 import { Box, Button, Typography } from "@mui/material";
 import { FiPrinter } from "react-icons/fi";
 import { FaFileExcel } from "react-icons/fa";
-import SimpleDropdownFilterButton from "./SimpleDropdownFilterButton"; // Pastikan path benar
+import SimpleDropdownFilterButton from "./SimpleDropdownFilterButton";
 import TanggalDropdownCustomButton from "./TanggalDropdownCustomButton";
 
 export default function AgGridTransaksiGL() {
+  const { theme } = useTheme(); // gunakan theme
   const [rowData, setRows] = useState([]);
   const [masterCoaList, setMasterCoaList] = useState([]);
   const [tanggalFilter, setTanggalFilter] = useState([]);
@@ -137,87 +139,140 @@ useEffect(() => {
   };
 
   return (
-    <Box sx={{ p: 2 }}>
-      <Box sx={{ display: "flex", flexDirection: { xs: "column", md: "row" }, alignItems: { md: "center" }, justifyContent: "space-between", gap: 2, mb: 2 }}>
-        <Typography variant="h6" fontWeight="bold">General Ledger (GL)</Typography>
+    <Box
+      sx={{
+        p: 2,
+        background: theme.cardColor,
+        color: theme.fontColor,
+        fontFamily: theme.fontFamily,
+        borderRadius: 2,
+        boxShadow: 2,
+      }}
+    >
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: { xs: "column", md: "row" },
+          alignItems: { md: "center" },
+          justifyContent: "space-between",
+          gap: 2,
+          mb: 2,
+        }}
+      >
+        <Typography
+          variant="h6"
+          fontWeight="bold"
+          sx={{
+            color: theme.fontColor,
+            fontFamily: theme.fontFamily,
+          }}
+        >
+          General Ledger (GL)
+        </Typography>
         <Box sx={{ display: "flex", gap: 1 }}>
           <Button
             onClick={handlePrint}
             variant="contained"
-            color="primary"
             startIcon={<FiPrinter />}
+            sx={{
+              background: theme.buttonSimpan,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+              "&:hover": { background: theme.buttonEdit },
+            }}
           >
             Print
           </Button>
           <Button
             onClick={handleExportExcel}
             variant="contained"
-            color="success"
             startIcon={<FaFileExcel />}
+            sx={{
+              background: theme.buttonEdit,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+              "&:hover": { background: theme.buttonSimpan },
+            }}
           >
             Excel
           </Button>
         </Box>
       </Box>
       <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 1 }}>
-  <span style={{ fontSize: 14, color: "#666" }}>Filter Aktif:</span>
-  {tanggalFilter.length > 0 && tanggalFilter.map(val => (
-    <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
-      {val} <span style={{ cursor: "pointer" }} onClick={() => setTanggalFilter(tanggalFilter.filter(t => t !== val))}>×</span>
-    </span>
-  ))}
-  {akunFilter.length > 0 && akunFilter.map(val => {
-    const label = masterCoaList.find(coa => String(coa.kode) === String(val));
-    return (
-      <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
-        {label ? label.nama : val} <span style={{ cursor: "pointer" }} onClick={() => setAkunFilter(akunFilter.filter(a => a !== val))}>×</span>
-      </span>
-    );
-  })}
-  {deskripsiFilter && (
-    <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
-      {deskripsiFilter} <span style={{ cursor: "pointer" }} onClick={() => setDeskripsiFilter("")}>×</span>
-    </span>
-  )}
-  {noTransaksiFilter.length > 0 && noTransaksiFilter.map(val => (
-    <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
-      {val} <span style={{ cursor: "pointer" }} onClick={() => setNoTransaksiFilter(noTransaksiFilter.filter(no => no !== val))}>×</span>
-    </span>
-  ))}
-  {projectNoFilter && (
-    <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
-      {projectNoFilter} <span style={{ cursor: "pointer" }} onClick={() => setProjectNoFilter("")}>×</span>
-    </span>
-  )}
-  {projectNameFilter && (
-    <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
-      {projectNameFilter} <span style={{ cursor: "pointer" }} onClick={() => setProjectNameFilter("")}>×</span>
-    </span>
-  )}
-  <Button
-    variant="outlined"
-    size="small"
-    sx={{ ml: 1, fontSize: 13, minWidth: 0, px: 1, py: 0.5 }}
-    onClick={handleResetFilter}
-  >
-    RESET FILTER
-  </Button>
-</Box>
+        <span style={{ fontSize: 14, color: theme.fontColor, fontFamily: theme.fontFamily }}>Filter Aktif:</span>
+        {tanggalFilter.length > 0 && tanggalFilter.map(val => (
+          <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+            {val} <span style={{ cursor: "pointer" }} onClick={() => setTanggalFilter(tanggalFilter.filter(t => t !== val))}>×</span>
+          </span>
+        ))}
+        {akunFilter.length > 0 && akunFilter.map(val => {
+          const label = masterCoaList.find(coa => String(coa.kode) === String(val));
+          return (
+            <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+              {label ? label.nama : val} <span style={{ cursor: "pointer" }} onClick={() => setAkunFilter(akunFilter.filter(a => a !== val))}>×</span>
+            </span>
+          );
+        })}
+        {deskripsiFilter && (
+          <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+            {deskripsiFilter} <span style={{ cursor: "pointer" }} onClick={() => setDeskripsiFilter("")}>×</span>
+          </span>
+        )}
+        {noTransaksiFilter.length > 0 && noTransaksiFilter.map(val => (
+          <span key={val} className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+            {val} <span style={{ cursor: "pointer" }} onClick={() => setNoTransaksiFilter(noTransaksiFilter.filter(no => no !== val))}>×</span>
+          </span>
+        ))}
+        {projectNoFilter && (
+          <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+            {projectNoFilter} <span style={{ cursor: "pointer" }} onClick={() => setProjectNoFilter("")}>×</span>
+          </span>
+        )}
+        {projectNameFilter && (
+          <span className="bg-blue-100 text-blue-700 rounded px-2 py-1 mr-1" style={{ fontSize: 13 }}>
+            {projectNameFilter} <span style={{ cursor: "pointer" }} onClick={() => setProjectNameFilter("")}>×</span>
+          </span>
+        )}
+        <Button
+          variant="outlined"
+          size="small"
+          sx={{
+            ml: 1,
+            fontSize: 13,
+            minWidth: 0,
+            px: 1,
+            py: 0.5,
+            color: theme.fontColor,
+            borderColor: theme.buttonEdit,
+            fontFamily: theme.fontFamily,
+          }}
+          onClick={handleResetFilter}
+        >
+          RESET FILTER
+        </Button>
+      </Box>
       <div style={{ overflowX: "auto" }}>
-        <table className="min-w-full border text-sm">
-          <thead className="bg-gray-100">
+        <table
+          className="min-w-full border text-sm"
+          style={{
+            fontFamily: theme.tableFontFamily,
+            background: theme.cardColor,
+            color: theme.tableFontColor,
+          }}
+        >
+          <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
             <tr>
               <th className="border px-2 py-1" style={{ minWidth: 60 }}>No</th>
-             <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 120 }}>
-  Tanggal
-  <span style={{ position: 'absolute', right: 4, top: 4 }}>
-    <TanggalDropdownCustomButton
-      rows={rowData}
-      value={tanggalFilter}
-      onChange={setTanggalFilter}
-    />
-  </span>
-</th>
+              <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 120 }}>
+                Tanggal
+                <span style={{ position: 'absolute', right: 4, top: 4 }}>
+                  <TanggalDropdownCustomButton
+                    rows={rowData}
+                    value={tanggalFilter}
+                    onChange={setTanggalFilter}
+                  />
+                </span>
+              </th>
               <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 220 }}>
                 Akun Transaksi
                 <span style={{ position: 'absolute', right: 4, top: 4 }}>
@@ -248,6 +303,11 @@ useEffect(() => {
                     onChange={e => setDeskripsiFilter(e.target.value)}
                     placeholder="Cari Deskripsi"
                     className="border rounded px-1 py-0.5 w-full mt-1"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   />
                 </div>
               </th>
@@ -281,6 +341,11 @@ useEffect(() => {
                     onChange={e => setProjectNoFilter(e.target.value)}
                     placeholder="Cari Project No"
                     className="border rounded px-1 py-0.5 w-full mt-1"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   />
                 </div>
               </th>
@@ -293,6 +358,11 @@ useEffect(() => {
                     onChange={e => setProjectNameFilter(e.target.value)}
                     placeholder="Cari Project Name"
                     className="border rounded px-1 py-0.5 w-full mt-1"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   />
                 </div>
               </th>
@@ -300,7 +370,7 @@ useEffect(() => {
           </thead>
           <tbody>
             {filteredRows.map((row, idx) => (
-              <tr key={row.id}>
+              <tr key={row.id} style={{ background: theme.tableBodyColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>
                 <td className="border px-2 py-1">{idx + 1}</td>
                 <td className="border px-2 py-1">{formatTanggal(row.tanggal)}</td>
                 <td className="border px-2 py-1">{getAkunTransaksiDisplay(row.akunTransaksi)}</td>

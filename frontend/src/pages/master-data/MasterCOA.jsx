@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import api from "../../utils/api";
+import { useTheme } from "../../context/ThemeContext"; // pastikan sudah ada
 
 export default function MasterCOA() {
+  const { theme } = useTheme();
   const [form, setForm] = useState({ kode: "", nama: "", masterCategoryCOAId: "", saldoAwal: "" });
   const [data, setData] = useState([]);
   const [kategoriList, setKategoriList] = useState([]);
@@ -9,6 +11,7 @@ export default function MasterCOA() {
   const [filterText, setFilterText] = useState("");
   const [filteredData, setFilteredData] = useState([]);
   const [editId, setEditId] = useState(null);
+  const [editKategoriId, setEditKategoriId] = useState(null);
   // const [page, setPage] = useState(0);
   // const [rowsPerPage, setRowsPerPage] = useState(10);
   const tableRef = useRef();
@@ -356,7 +359,7 @@ export default function MasterCOA() {
           return 0;
         })
         .filter(num => num > 0)
-        .sort((a, b) => b - a); // Sort descending untuk ambil yang terbesar
+        .sort((a, b) => b - a); // Sort descending untuk ambil yang terbesar      
       
       // Ambil nomor terbesar dan tambah 1
       const maxNumber = nomorUrut.length > 0 ? nomorUrut[0] : 0;
@@ -414,32 +417,52 @@ export default function MasterCOA() {
     }
   };
 
+  const [showModalKategori, setShowModalKategori] = useState(false);
+  const [formKategori, setFormKategori] = useState({ kode: "", nama: "", tipeAkun: "" });
+  const [loadingKategori, setLoadingKategori] = useState(false);
+
+  // Mapping tipe akun value ke nama
+  const tipeAkunMap = {
+    "1": "Asset",
+    "2": "Kewajiban",
+    "3": "Modal",
+    "4": "Pendapatan",
+    "5": "Harga Pokok Penjualan",
+    "6": "Beban",
+    "7": "Pendapatan Lainnya",
+    "8": "Beban Lainnya",
+  };
+
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-4">Master COA</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-4" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Master COA</h1>
       <div className="flex flex-col md:flex-row gap-8">
         <form
           onSubmit={handleSubmit}
-          className="bg-white rounded-xl shadow-lg p-6 w-full max-w-md border"
+          className="rounded-xl shadow-lg p-6 w-full max-w-md border"
+          style={{ background: theme.formColor }}
         >
           <div className="space-y-4">
-            {/* Button Kosongkan di atas form */}
             <div className="flex justify-end">
               <button
                 type="button"
                 onClick={handleResetForm}
-                className="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition text-sm"
+                className="px-4 py-2 rounded-lg font-semibold transition text-sm"
+                style={{
+                  background: theme.buttonRefresh,
+                  color: "#fff",
+                  fontFamily: theme.fontFamily,
+                }}
                 title="Kosongkan semua field"
               >
                 Kosongkan
               </button>
             </div>
-            
             <div>
-              <label className="block mb-1 font-semibold text-gray-700">
+              <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                 Kode Akun
                 {!editId && (
-                  <span className="text-sm text-gray-500 font-normal ml-2">
+                  <span className="text-sm font-normal ml-2" style={{ color: theme.fontColor }}>
                     (Auto-generate saat pilih kategori)
                   </span>
                 )}
@@ -450,9 +473,14 @@ export default function MasterCOA() {
                   name="kode"
                   value={form.kode}
                   onChange={handleChange}
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  className="flex-1 border rounded-lg px-4 py-2 transition"
                   placeholder="Contoh: 1001"
                   required
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                  }}
                 />
                 <button
                   type="button"
@@ -465,7 +493,12 @@ export default function MasterCOA() {
                     }
                   }}
                   disabled={!form.masterCategoryCOAId}
-                  className="bg-blue-500 text-white px-3 py-2 rounded-lg hover:bg-blue-600 disabled:bg-gray-400 transition text-sm"
+                  className="px-3 py-2 rounded-lg transition text-sm"
+                  style={{
+                    background: theme.buttonEdit,
+                    color: "#fff",
+                    fontFamily: theme.fontFamily,
+                  }}
                   title="Generate kode otomatis berdasarkan kategori"
                 >
                   Auto
@@ -473,7 +506,7 @@ export default function MasterCOA() {
               </div>
             </div>
             <div>
-              <label className="block mb-1 font-semibold text-gray-700">
+              <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                 Nama Akun
               </label>
               <input
@@ -481,21 +514,37 @@ export default function MasterCOA() {
                 name="nama"
                 value={form.nama}
                 onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                className="w-full border rounded-lg px-4 py-2 transition"
                 placeholder="Contoh: Kas"
                 required
+                style={{
+                  background: theme.fieldColor,
+                  color: theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                }}
               />
             </div>
             <div>
-              <label className="block mb-1 font-semibold text-gray-700">
+              <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                 Kategori
               </label>
               <select
                 name="masterCategoryCOAId"
                 value={form.masterCategoryCOAId}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                onChange={e => {
+                  if (e.target.value === "__tambah__") {
+                    setShowModalKategori(true);
+                  } else {
+                    handleChange(e);
+                  }
+                }}
+                className="w-full border rounded-lg px-4 py-2 transition"
                 required
+                style={{
+                  background: theme.fieldColor,
+                  color: theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                }}
               >
                 <option value="">Pilih Kategori</option>
                 {kategoriList.map((kat) => (
@@ -503,10 +552,11 @@ export default function MasterCOA() {
                     {kat.kode} - {kat.nama} ({kat.tipeAkun})
                   </option>
                 ))}
+                <option value="__tambah__">+ Tambah Kategori</option>
               </select>
             </div>
             <div>
-              <label className="block mb-1 font-semibold text-gray-700">
+              <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                 Saldo Awal
               </label>
               <input
@@ -516,15 +566,25 @@ export default function MasterCOA() {
                 onChange={handleChange}
                 onBlur={handleSaldoAwalBlur}
                 onFocus={handleSaldoAwalFocus}
-                className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                className="w-full border rounded-lg px-4 py-2 transition"
                 placeholder="Masukkan saldo awal"
+                style={{
+                  background: theme.fieldColor,
+                  color: theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                }}
               />
             </div>
             {error && <div className="text-red-500 text-sm">{error}</div>}
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="flex-1 bg-indigo-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-indigo-600 transition"
+                className="flex-1 rounded-lg font-semibold transition"
+                style={{
+                  background: theme.buttonSimpan,
+                  color: "#fff",
+                  fontFamily: theme.fontFamily,
+                }}
               >
                 {editId ? 'Update' : 'Simpan'}
               </button>
@@ -532,7 +592,12 @@ export default function MasterCOA() {
                 <button
                   type="button"
                   onClick={handleResetForm}
-                  className="px-4 py-2 bg-red-500 text-white rounded-lg font-semibold hover:bg-red-600 transition"
+                  className="px-4 py-2 rounded-lg font-semibold transition"
+                  style={{
+                    background: theme.buttonHapus,
+                    color: "#fff",
+                    fontFamily: theme.fontFamily,
+                  }}
                 >
                   Cancel
                 </button>
@@ -545,22 +610,32 @@ export default function MasterCOA() {
             <input
               type="text"
               placeholder="Cari kode/nama/kategori..."
-              className="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+              className="border rounded-lg px-3 py-2 w-full md:w-64 transition"
               value={filterText}
               onChange={handleFilter}
+              style={{
+                background: theme.fieldColor,
+                color: theme.fontColor,
+                fontFamily: theme.fontFamily,
+              }}
             />
             <button
               onClick={handlePrint}
-              className="bg-green-500 text-white px-4 py-2 rounded-lg font-semibold hover:bg-green-600 transition print:hidden"
+              className="px-4 py-2 rounded-lg font-semibold transition print:hidden"
               type="button"
+              style={{
+                background: theme.buttonSimpan,
+                color: "#fff",
+                fontFamily: theme.fontFamily,
+              }}
             >
               Print
             </button>
           </div>
           <div ref={tableRef} style={{ maxHeight: '500px', overflowY: 'auto' }}>
-            <table className="w-full border rounded-lg text-sm shadow-sm">
+            <table className="w-full border rounded-lg text-sm shadow-sm" style={{ fontFamily: theme.tableFontFamily }}>
               <thead>
-                <tr className="bg-indigo-100 text-gray-700">
+                <tr style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
                   <th className="px-3 py-2 font-semibold border-b">Kode</th>
                   <th className="px-3 py-2 font-semibold border-b">Nama</th>
                   <th className="px-3 py-2 font-semibold border-b">Kategori</th>
@@ -575,6 +650,11 @@ export default function MasterCOA() {
                       onChange={e => { setFilterKode(e.target.value); setPage(0); }}
                       className="w-full border rounded px-2 py-1 text-xs"
                       placeholder="Filter kode"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                      }}
                     />
                   </th>
                   <th className="px-3 py-1 border-b">
@@ -584,6 +664,11 @@ export default function MasterCOA() {
                       onChange={e => { setFilterNama(e.target.value); setPage(0); }}
                       className="w-full border rounded px-2 py-1 text-xs"
                       placeholder="Filter nama"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                      }}
                     />
                   </th>
                   <th className="px-3 py-1 border-b">
@@ -593,6 +678,11 @@ export default function MasterCOA() {
                       onChange={e => { setFilterKategori(e.target.value); setPage(0); }}
                       className="w-full border rounded px-2 py-1 text-xs"
                       placeholder="Filter kategori"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                      }}
                     />
                   </th>
                   <th />
@@ -601,68 +691,228 @@ export default function MasterCOA() {
               <tbody>
                 {pagedData.map((row) =>
                   row.isHeader ? (
-                    <tr key={"header-" + row.kategori} className="bg-gray-50">
-                      <td colSpan={5} className="px-3 py-2 font-bold text-indigo-700 border-b border-indigo-200">
+                    <tr key={"header-" + row.kategori} style={{ background: theme.cardColor }}>
+                      <td colSpan={5} className="px-3 py-2 font-bold border-b" style={{ color: theme.fontColor }}>
                         {row.kategori}
                       </td>
                     </tr>
                   ) : (
-                    <tr key={row.id} className="hover:bg-indigo-50 border-b last:border-b-0">
+                    <tr key={row.id} className="border-b last:border-b-0" style={{ background: theme.tableBodyColor, color: theme.tableFontColor }}>
                       <td className="px-3 py-2">{row.kode}</td>
                       <td className="px-3 py-2">{row.nama}</td>
                       <td className="px-3 py-2">
                         {row.masterCategoryCOA
                           ? `${row.masterCategoryCOA.kode} - ${row.masterCategoryCOA.nama} (${row.masterCategoryCOA.tipeAkun})`
-                          : "-"}
+                          : "-"
+                        }
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {row.saldoAwal ? formatNumber(row.saldoAwal) : '0'}
+                        {row.saldoAwal !== undefined && row.saldoAwal !== null
+                          ? formatNumber(row.saldoAwal)
+                          : "-"}
                       </td>
                       <td className="px-3 py-2">
-                        <button
-                          onClick={() => handleEdit(row)}
-                          className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 mr-1"
-                          type="button"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(row)}
-                          className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600"
-                          type="button"
-                        >
-                          Delete
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleEdit(row)}
+                            className="px-3 py-1 rounded-lg font-semibold transition text-sm"
+                            style={{
+                              background: theme.buttonEdit,
+                              color: "#fff",
+                              fontFamily: theme.fontFamily,
+                            }}
+                            title="Edit COA"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(row)}
+                            className="px-3 py-1 rounded-lg font-semibold transition text-sm"
+                            style={{
+                              background: theme.buttonHapus,
+                              color: "#fff",
+                              fontFamily: theme.fontFamily,
+                            }}
+                            title="Hapus COA"
+                          >
+                            Hapus
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   )
                 )}
               </tbody>
             </table>
-            {/* Pagination removed: now using scrollable table */}
           </div>
         </div>
       </div>
-      {/* CSS agar hanya tabel yang dicetak */}
-      <style>{`
-        @media print {
-          body * {
-            visibility: hidden;
-          }
-          .rdt_Table, .rdt_Table * {
-            visibility: visible;
-          }
-          .rdt_Table {
-            position: absolute;
-            left: 0;
-            top: 0;
-            width: 100vw;
-          }
-          .print\\:hidden {
-            display: none !important;
-          }
-        }
-      `}</style>
+      {showModalKategori && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-xl p-6 shadow-lg w-full max-w-6xl" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+            <h2 className="text-lg font-bold mb-4">Tambah Kategori COA</h2>
+            <div className="flex flex-row gap-8">
+              {/* Form Input */}
+              <form
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setLoadingKategori(true);
+                  try {
+                    if (editKategoriId) {
+                      // Edit mode
+                      await api.put(`/master-category-coa/${editKategoriId}`, formKategori);
+                    } else {
+                      // Insert mode
+                      await api.post("/master-category-coa", formKategori);
+                    }
+                    const kategoriRes = await api.get("/master-category-coa");
+                    const sortedKategori = kategoriRes.data.sort((a, b) => parseInt(a.tipeAkun, 10) - parseInt(b.tipeAkun, 10));
+                    setKategoriList(sortedKategori);
+                    setForm(prev => ({ ...prev, masterCategoryCOAId: editKategoriId ? editKategoriId.toString() : kategoriRes.data[kategoriRes.data.length - 1].id.toString() }));
+                    setShowModalKategori(false);
+                    setFormKategori({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
+                    setEditKategoriId(null);
+                  } catch (err) {
+                    alert("Gagal simpan kategori!");
+                  }
+                  setLoadingKategori(false);
+                }}
+                className="space-y-4 w-1/3"
+              >
+                <div>
+                  <label className="block mb-1 font-semibold">Kode</label>
+                  <input
+                    type="text"
+                    value={formKategori.kode}
+                    onChange={e => setFormKategori(f => ({ ...f, kode: e.target.value }))}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold">Nama</label>
+                  <input
+                    type="text"
+                    value={formKategori.nama}
+                    onChange={e => setFormKategori(f => ({ ...f, nama: e.target.value }))}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold">Tipe Akun</label>
+                  <select
+                    value={formKategori.tipeAkun}
+                    onChange={e => setFormKategori(f => ({ ...f, tipeAkun: e.target.value }))}
+                    className="w-full border rounded px-3 py-2"
+                    required
+                  >
+                    <option value="">Pilih Tipe Akun</option>
+                    {Object.entries(tipeAkunMap).map(([key, val]) => (
+                      <option key={key} value={key}>{val}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    checked={formKategori.isKasBank || false}
+                    onChange={e => setFormKategori(f => ({ ...f, isKasBank: e.target.checked }))}
+                    id="isKasBank"
+                  />
+                  <label htmlFor="isKasBank" className="font-semibold">Akun Kas & Bank</label>
+                </div>
+                <div className="flex gap-2 justify-end mt-4">
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded font-semibold"
+                    style={{ background: theme.buttonRefresh, color: "#fff" }}
+                    onClick={() => setShowModalKategori(false)}
+                    disabled={loadingKategori}
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 rounded font-semibold"
+                    style={{ background: theme.buttonSimpan, color: "#fff" }}
+                    disabled={loadingKategori}
+                  >
+                    Simpan
+                  </button>
+                </div>
+              </form>
+              {/* Tabel Kategori */}
+              <div className="w-2/3" style={{ maxHeight: 400, overflowY: "auto" }}>
+                <table className="w-full border rounded-lg text-sm shadow-sm" style={{ fontFamily: theme.tableFontFamily }}>
+                  <thead>
+                    <tr style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
+                      <th className="px-3 py-2 font-semibold border-b">Kode</th>
+                      <th className="px-3 py-2 font-semibold border-b">Nama</th>
+                      <th className="px-3 py-2 font-semibold border-b">Tipe Akun</th>
+                      <th className="px-3 py-2 font-semibold border-b">Kas & Bank</th>
+                      <th className="px-3 py-2 font-semibold border-b">Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {[...kategoriList]
+                      .sort((a, b) => parseInt(a.tipeAkun, 10) - parseInt(b.tipeAkun, 10))
+                      .map((kat) => (
+                        <tr key={kat.id} style={{ background: theme.tableBodyColor, color: theme.tableFontColor }}>
+                          <td className="px-3 py-2">{kat.kode}</td>
+                          <td className="px-3 py-2">{kat.nama}</td>
+                          <td className="px-3 py-2">{tipeAkunMap[kat.tipeAkun] || kat.tipeAkun}</td>
+                          <td className="px-3 py-2 text-center">{kat.isKasBank ? "✔" : ""}</td>
+                          <td className="px-3 py-2 flex gap-2">
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded font-semibold"
+                              style={{ background: theme.buttonUpdate, color: "#fff" }}
+                              onClick={() => {
+                                setFormKategori({
+                                  kode: kat.kode,
+                                  nama: kat.nama,
+                                  tipeAkun: kat.tipeAkun,
+                                  isKasBank: !!kat.isKasBank,
+                                });
+                                setEditKategoriId(kat.id);
+                              }}
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              className="px-2 py-1 rounded font-semibold"
+                              style={{ background: theme.buttonHapus, color: "#fff" }}
+                              onClick={async () => {
+                                if (window.confirm(`Hapus kategori ${kat.nama}?`)) {
+                                  setLoadingKategori(true);
+                                  try {
+                                    await api.delete(`/master-category-coa/${kat.id}`);
+                                    const kategoriRes = await api.get("/master-category-coa");
+                                    const sortedKategori = kategoriRes.data.sort((a, b) => parseInt(a.tipeAkun, 10) - parseInt(b.tipeAkun, 10));
+                                    setKategoriList(sortedKategori);
+                                    setFormKategori({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
+                                    setEditKategoriId(null);
+                                  } catch {
+                                    alert("Gagal hapus kategori!");
+                                  }
+                                  setLoadingKategori(false);
+                                }
+                              }}
+                            >
+                              Hapus
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
