@@ -748,12 +748,15 @@ export default function MasterCOA() {
         </div>
       </div>
       {showModalKategori && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-          <div className="bg-white rounded-xl p-6 shadow-lg w-full max-w-6xl" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-            <h2 className="text-lg font-bold mb-4">Tambah Kategori COA</h2>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40" >
+          <div className="rounded-xl p-6 shadow-lg w-full max-w-6xl" style={{ background: theme.formColor }}>
+            <h2 className="text-lg font-bold mb-4" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+              {editKategoriId ? 'Edit Kategori COA' : 'Tambah Kategori COA'}
+            </h2>
             <div className="flex flex-row gap-8">
               {/* Form Input */}
               <form
+                style={{ background: theme.cardColor }}
                 onSubmit={async (e) => {
                   e.preventDefault();
                   setLoadingKategori(true);
@@ -777,35 +780,56 @@ export default function MasterCOA() {
                   }
                   setLoadingKategori(false);
                 }}
-                className="space-y-4 w-1/3"
+                className="space-y-4 w-1/3 p-4 rounded-lg"
               >
                 <div>
-                  <label className="block mb-1 font-semibold">Kode</label>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Kode
+                  </label>
                   <input
                     type="text"
                     value={formKategori.kode}
                     onChange={e => setFormKategori(f => ({ ...f, kode: e.target.value }))}
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded-lg px-3 py-2 transition"
                     required
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 font-semibold">Nama</label>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Nama
+                  </label>
                   <input
                     type="text"
                     value={formKategori.nama}
                     onChange={e => setFormKategori(f => ({ ...f, nama: e.target.value }))}
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded-lg px-3 py-2 transition"
                     required
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   />
                 </div>
                 <div>
-                  <label className="block mb-1 font-semibold">Tipe Akun</label>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Tipe Akun
+                  </label>
                   <select
                     value={formKategori.tipeAkun}
                     onChange={e => setFormKategori(f => ({ ...f, tipeAkun: e.target.value }))}
-                    className="w-full border rounded px-3 py-2"
+                    className="w-full border rounded-lg px-3 py-2 transition"
                     required
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   >
                     <option value="">Pilih Tipe Akun</option>
                     {Object.entries(tipeAkunMap).map(([key, val]) => (
@@ -819,31 +843,47 @@ export default function MasterCOA() {
                     checked={formKategori.isKasBank || false}
                     onChange={e => setFormKategori(f => ({ ...f, isKasBank: e.target.checked }))}
                     id="isKasBank"
+                    className="rounded"
                   />
-                  <label htmlFor="isKasBank" className="font-semibold">Akun Kas & Bank</label>
+                  <label htmlFor="isKasBank" className="font-semibold" style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                  }}>Akun Kas & Bank</label>
                 </div>
                 <div className="flex gap-2 justify-end mt-4">
                   <button
                     type="button"
-                    className="px-4 py-2 rounded font-semibold"
-                    style={{ background: theme.buttonRefresh, color: "#fff" }}
-                    onClick={() => setShowModalKategori(false)}
+                    className="px-4 py-2 rounded-lg font-semibold transition"
+                    style={{ 
+                      background: theme.buttonRefresh, 
+                      color: "#fff",
+                      fontFamily: theme.fontFamily,
+                    }}
+                    onClick={() => {
+                      setShowModalKategori(false);
+                      setFormKategori({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
+                      setEditKategoriId(null);
+                    }}
                     disabled={loadingKategori}
                   >
                     Batal
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded font-semibold"
-                    style={{ background: theme.buttonSimpan, color: "#fff" }}
+                    className="px-4 py-2 rounded-lg font-semibold transition"
+                    style={{ 
+                      background: theme.buttonSimpan, 
+                      color: "#fff",
+                      fontFamily: theme.fontFamily,
+                    }}
                     disabled={loadingKategori}
                   >
-                    Simpan
+                    {loadingKategori ? 'Menyimpan...' : (editKategoriId ? 'Update' : 'Simpan')}
                   </button>
                 </div>
               </form>
               {/* Tabel Kategori */}
-              <div className="w-2/3" style={{ maxHeight: 400, overflowY: "auto" }}>
+              <div className="w-2/3 rounded-lg" style={{ maxHeight: 400, overflowY: "auto", background: theme.cardColor }}>
                 <table className="w-full border rounded-lg text-sm shadow-sm" style={{ fontFamily: theme.tableFontFamily }}>
                   <thead>
                     <tr style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
@@ -866,8 +906,12 @@ export default function MasterCOA() {
                           <td className="px-3 py-2 flex gap-2">
                             <button
                               type="button"
-                              className="px-2 py-1 rounded font-semibold"
-                              style={{ background: theme.buttonUpdate, color: "#fff" }}
+                              className="px-2 py-1 rounded-lg font-semibold transition text-sm"
+                              style={{ 
+                                background: theme.buttonEdit, 
+                                color: "#fff",
+                                fontFamily: theme.fontFamily,
+                              }}
                               onClick={() => {
                                 setFormKategori({
                                   kode: kat.kode,
@@ -882,8 +926,12 @@ export default function MasterCOA() {
                             </button>
                             <button
                               type="button"
-                              className="px-2 py-1 rounded font-semibold"
-                              style={{ background: theme.buttonHapus, color: "#fff" }}
+                              className="px-2 py-1 rounded-lg font-semibold transition text-sm"
+                              style={{ 
+                                background: theme.buttonHapus, 
+                                color: "#fff",
+                                fontFamily: theme.fontFamily,
+                              }}
                               onClick={async () => {
                                 if (window.confirm(`Hapus kategori ${kat.nama}?`)) {
                                   setLoadingKategori(true);

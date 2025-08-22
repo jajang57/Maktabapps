@@ -61,7 +61,7 @@ export default function TopNavbar({ onToggleSidebar }) {
     {
       name: "Transaksi",
       dropdown: [
-        { name: "Akun category", to: "/master-data/mastercatcoa"},
+       // { name: "Akun category", to: "/master-data/mastercatcoa"},
         { name: "Akun", to: "/master-data/coa"},
         { name: "Buku Kas", to: "/input-transaksi" },
         { name: "Pembelian", to: "/transaksi/pembelian" },
@@ -90,6 +90,15 @@ export default function TopNavbar({ onToggleSidebar }) {
         { name: "Pemasok", to: "/master-data/pemasok" },
         { name: "Pembeli", to: "/master-data/pembeli" },
         { name: "Pekerjaan", to: "/master-data/project" },
+
+      ],
+    },
+    {
+      name: "Persediaan",
+      dropdown: [
+        { name: "Barang/Jasa" },
+        { name: "Gudang" },
+        { name: "Penyesuaian Persediaan" },
 
       ],
     },

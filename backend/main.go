@@ -47,7 +47,7 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	err = db.AutoMigrate(&models.AJE{}, &models.UserThemeSetting{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{})
+	err = db.AutoMigrate(&models.AJE{}, &models.UserThemeSetting{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{}, &models.MasterKelompokItem{}, &models.MasterKategori{}, &models.MasterBarangJasa{}, &models.Penjualan{}, &models.PenjualanItem{})
 
 	if err != nil {
 		panic(fmt.Sprintf("AutoMigrate error: %v", err))
@@ -136,6 +136,40 @@ func main() {
 		api.POST("/aje/delete", handlers.DeleteAJE(db))                    // delete
 		api.GET("/aje/cek-no-bukti", handlers.CekNoBuktiAJE(db))           // cek no bukti di AJE
 		api.GET("/gl/cek-no-bukti", handlers.CekNoBuktiGL(db))             // cek no bukti di GL
+
+		// Master Kelompok Item Routes
+		api.GET("/master-kelompok-item", handlers.GetMasterKelompokItem(db))
+		api.POST("/master-kelompok-item", handlers.CreateMasterKelompokItem(db))
+		api.PUT("/master-kelompok-item/:id", handlers.UpdateMasterKelompokItem(db))
+		api.DELETE("/master-kelompok-item/:id", handlers.DeleteMasterKelompokItem(db))
+
+		// Master Kategori Routes
+		api.GET("/master-kategori", handlers.GetMasterKategori(db))
+		api.POST("/master-kategori", handlers.CreateMasterKategori(db))
+		api.PUT("/master-kategori/:id", handlers.UpdateMasterKategori(db))
+		api.DELETE("/master-kategori/:id", handlers.DeleteMasterKategori(db))
+
+		// Master Barang Jasa Routes
+		api.GET("/master-barang-jasa", handlers.GetMasterBarangJasa(db))
+		api.POST("/master-barang-jasa", handlers.CreateMasterBarangJasa(db))
+		api.PUT("/master-barang-jasa/:id", handlers.UpdateMasterBarangJasa(db))
+		api.DELETE("/master-barang-jasa/:id", handlers.DeleteMasterBarangJasa(db))
+		api.GET("/master-barang-jasa/by-jenis", handlers.GetMasterBarangJasaByJenis(db))
+		api.GET("/master-barang-jasa/for-sale", handlers.GetMasterBarangJasaForSale(db))
+		api.GET("/master-barang-jasa/for-purchase", handlers.GetMasterBarangJasaForPurchase(db))
+
+		// Penjualan Routes
+		penjualanHandler := handlers.NewPenjualanHandler(db)
+		api.GET("/penjualan", penjualanHandler.GetAllPenjualan)
+		api.GET("/penjualan/:id", penjualanHandler.GetPenjualanByID)
+		api.POST("/penjualan", penjualanHandler.CreatePenjualan)
+		api.PUT("/penjualan/:id", penjualanHandler.UpdatePenjualan)
+		api.DELETE("/penjualan/:id", penjualanHandler.DeletePenjualan)
+		api.DELETE("/penjualan/:id/hard", penjualanHandler.HardDeletePenjualan)
+		api.GET("/penjualan/nomor/:nomor", penjualanHandler.GetPenjualanByNomor)
+		api.PATCH("/penjualan/:id/status", penjualanHandler.UpdatePenjualanStatus)
+		api.GET("/penjualan/report", penjualanHandler.GetPenjualanReport)
+		api.GET("/penjualan/next-invoice-number", penjualanHandler.GetNextInvoiceNumber)
 	}
 
 	r.Run("0.0.0.0:8080")

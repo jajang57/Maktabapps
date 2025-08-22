@@ -32,7 +32,7 @@ export default function SideNavbar({ onClose }) {
         </svg>
       ),
       dropdown: [
-        { name: "Akun category", to: "/master-data/mastercatcoa" },
+       // { name: "Akun category", to: "/master-data/mastercatcoa" },
         { name: "Akun", to: "/master-data/coa" },
         { name: "Buku Kas", to: "/input-transaksi" },
         { name: "Pembelian", to: "/transaksi/pembelian" },
@@ -69,6 +69,20 @@ export default function SideNavbar({ onClose }) {
         { name: "Pemasok", to: "/master-data/pemasok" },
         { name: "Pembeli", to: "/master-data/pembeli" },
         { name: "Pekerjaan", to: "/master-data/project" },
+      ],
+    },
+    {
+      name: "Persediaan",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="M16 3v4M8 3v4" />
+        </svg>
+      ),
+      dropdown: [
+        { name: "Barang Dan Jasa", to: "/master-data/barang-jasa" },
+        { name: "Gudang" },
+        { name: "Penyesuaian Persediaan" },
       ],
     },
     {
