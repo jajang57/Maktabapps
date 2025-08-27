@@ -15,6 +15,7 @@ import MasterPembeli from "./pages/master-data/MasterPembeli";
 import MasterKaryawan from "./pages/master-data/MasterKaryawan";
 import MasterProject from "./pages/master-data/MasterProject";
 import MasterBarangJasa from "./pages/master-data/MasterBarangJasa";
+import MasterGudang from "./pages/master-data/MasterGudang";
 import Setting from "./pages/Setting";
 import TrialBalance from "./pages/laporan/TrialBalance";
 import BukuBesar from "./pages/laporan/BukuBesar";
@@ -165,6 +166,13 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <BukuBesar />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/master-data/gudang" element={
+              <ProtectedRoute>
+                <Layout>
+                  <MasterGudang />
                 </Layout>
               </ProtectedRoute>
             } />

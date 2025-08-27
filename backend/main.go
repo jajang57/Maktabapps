@@ -47,7 +47,25 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	err = db.AutoMigrate(&models.AJE{}, &models.UserThemeSetting{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{}, &models.MasterKelompokItem{}, &models.MasterKategori{}, &models.MasterBarangJasa{}, &models.Penjualan{}, &models.PenjualanItem{})
+	err = db.AutoMigrate(
+		&models.MasterGudang{},
+		&models.AJE{},
+		&models.UserThemeSetting{},
+		&models.MasterCOA{},
+		&models.MasterCategoryCOA{},
+		&models.InputTransaksi{},
+		&models.User{},
+		&models.MasterProject{},
+		&models.GL{},
+		&models.GLSummary{},
+		&models.MasterKelompokItem{},
+		&models.MasterKategori{},
+		&models.MasterBarangJasa{},
+		&models.Penjualan{},
+		&models.PenjualanItem{},
+		&models.MasterGudangGroup{},
+		&models.MasterDepartement{},
+	)
 
 	if err != nil {
 		panic(fmt.Sprintf("AutoMigrate error: %v", err))
@@ -170,6 +188,25 @@ func main() {
 		api.PATCH("/penjualan/:id/status", penjualanHandler.UpdatePenjualanStatus)
 		api.GET("/penjualan/report", penjualanHandler.GetPenjualanReport)
 		api.GET("/penjualan/next-invoice-number", penjualanHandler.GetNextInvoiceNumber)
+
+		// Master Gudang Routes
+		r.POST("/master-gudang", handlers.CreateGudang(db))
+		r.GET("/master-gudang", handlers.GetGudangList(db))
+		r.PUT("/master-gudang/:id", handlers.UpdateGudang(db))
+		r.DELETE("/master-gudang/:id", handlers.DeleteGudang(db))
+
+		// Master Gudang Group Routes
+		api.GET("/master-gudang-group", handlers.GetMasterGudangGroup(db))
+		api.POST("/master-gudang-group", handlers.CreateMasterGudangGroup(db))
+		api.PUT("/master-gudang-group/:id", handlers.UpdateMasterGudangGroup(db))
+		api.DELETE("/master-gudang-group/:id", handlers.DeleteMasterGudangGroup(db))
+
+		// Master Departement Routes
+		api.GET("/master-departement", handlers.GetMasterDepartement(db))
+		api.POST("/master-departement", handlers.CreateMasterDepartement(db))
+		api.PUT("/master-departement/:id", handlers.UpdateMasterDepartement(db))
+		api.DELETE("/master-departement/:id", handlers.DeleteMasterDepartement(db))
+
 	}
 
 	r.Run("0.0.0.0:8080")

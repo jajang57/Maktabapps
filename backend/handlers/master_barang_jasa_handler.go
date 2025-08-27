@@ -131,6 +131,15 @@ func UpdateMasterBarangJasa(db *gorm.DB) gin.HandlerFunc {
 		barangJasa.Image = updateData.Image
 		barangJasa.Aktif = updateData.Aktif
 
+		// Tambahkan field Akun GL
+		barangJasa.AkunPersediaan = updateData.AkunPersediaan
+		barangJasa.AkunPenjualan = updateData.AkunPenjualan
+		barangJasa.AkunReturPenjualan = updateData.AkunReturPenjualan
+		barangJasa.AkunDiskonPenjualan = updateData.AkunDiskonPenjualan
+		barangJasa.AkunHPP = updateData.AkunHPP
+		barangJasa.AkunReturPembelian = updateData.AkunReturPembelian
+		barangJasa.AkunDiskonKhusus = updateData.AkunDiskonKhusus
+
 		if err := db.Save(&barangJasa).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengupdate barang/jasa"})
 			return

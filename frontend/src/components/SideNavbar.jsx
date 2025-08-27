@@ -81,8 +81,8 @@ export default function SideNavbar({ onClose }) {
       ),
       dropdown: [
         { name: "Barang Dan Jasa", to: "/master-data/barang-jasa" },
-        { name: "Gudang" },
-        { name: "Penyesuaian Persediaan" },
+        { name: "Gudang", to: "/master-data/gudang" },
+        { name: "Penyesuaian Persediaan", to: "/master-data/penyesuaian-persediaan" },
       ],
     },
     {

@@ -25,6 +25,14 @@ type MasterBarangJasa struct {
 	CreatedAt    time.Time      `json:"created_at"`
 	UpdatedAt    time.Time      `json:"updated_at"`
 	DeletedAt    gorm.DeletedAt `json:"deleted_at" gorm:"index"`
+	// Akun GL
+	AkunPersediaan      string `json:"akunPersediaan"`
+	AkunPenjualan       string `json:"akunPenjualan"`
+	AkunReturPenjualan  string `json:"akunReturPenjualan"`
+	AkunDiskonPenjualan string `json:"akunDiskonPenjualan"`
+	AkunHPP             string `json:"akunHPP"`
+	AkunReturPembelian  string `json:"akunReturPembelian"`
+	AkunDiskonKhusus    string `json:"akunDiskonKhusus"`
 }
 
 func (MasterBarangJasa) TableName() string {

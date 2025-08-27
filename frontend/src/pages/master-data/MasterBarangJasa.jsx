@@ -88,6 +88,20 @@ export default function MasterBarangJasa() {
   const [kategoriForm, setKategoriForm] = useState({ kode: "", nama: "" });
   const [editKategoriId, setEditKategoriId] = useState(null);
 
+  // Tambahkan state untuk tab dan GL Account
+  const [activeTab, setActiveTab] = useState("Umum");
+  const [glAccount, setGlAccount] = useState({
+    persediaan: "",
+    penjualan: "",
+    returPenjualan: "",
+    diskonPenjualan: "",
+    hpp: "",
+    returPembelian: "",
+    diskonKhusus: "",
+  });
+
+  const [coaList, setCoaList] = useState([]);
+
   // Fungsi untuk format angka dengan 2 desimal
   const formatNumber = (value) => {
     if (!value || value === '') return '';
@@ -116,6 +130,7 @@ export default function MasterBarangJasa() {
     fetchData();
     fetchKelompokData();
     fetchKategoriData();
+    fetchCoaList(); // Tambahkan ini
   }, []);
 
   const fetchData = () => {
@@ -142,6 +157,12 @@ export default function MasterBarangJasa() {
       .catch(() => console.error("Gagal mengambil data Kategori"));
   };
 
+  const fetchCoaList = () => {
+    api.get("/master-coa")
+      .then((res) => setCoaList(res.data))
+      .catch(() => setCoaList([]));
+  };
+
   // Submit data
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -155,6 +176,14 @@ export default function MasterBarangJasa() {
       hargaBeli: form.hargaBeli ? parseFloat(unformatNumber(form.hargaBeli)) : 0,
       hargaJual: form.hargaJual ? parseFloat(unformatNumber(form.hargaJual)) : 0,
       stokMinimal: form.stokMinimal ? parseInt(form.stokMinimal) : 0,
+      // Tambahkan field Akun GL
+      akunPersediaan: glAccount.persediaan,
+      akunPenjualan: glAccount.penjualan,
+      akunReturPenjualan: glAccount.returPenjualan,
+      akunDiskonPenjualan: glAccount.diskonPenjualan,
+      akunHPP: glAccount.hpp,
+      akunReturPembelian: glAccount.returPembelian,
+      akunDiskonKhusus: glAccount.diskonKhusus,
     };
 
     // Cek duplikat kode
@@ -226,11 +255,21 @@ export default function MasterBarangJasa() {
       image: row.image || "",
       aktif: row.aktif !== false
     });
+    setGlAccount({
+      persediaan: row.akunPersediaan || "",
+      penjualan: row.akunPenjualan || "",
+      returPenjualan: row.akunReturPenjualan || "",
+      diskonPenjualan: row.akunDiskonPenjualan || "",
+      hpp: row.akunHPP || "",
+      returPembelian: row.akunReturPembelian || "",
+      diskonKhusus: row.akunDiskonKhusus || "",
+    });
     setFormattedHargaBeli(row.hargaBeli ? formatNumber(row.hargaBeli) : "");
     setFormattedHargaJual(row.hargaJual ? formatNumber(row.hargaJual) : "");
     setImagePreview(row.image || "");
     setEditId(row.id);
-    setShowForm(true); // Tampilkan form saat edit
+    setFormVisible(true); // <-- Ganti dari setShowForm(true) ke setFormVisible(true)
+    setFormAnim("fade-down"); // <-- Tambahkan agar animasi muncul saat edit
   };
 
   const handleChange = (e) => {
@@ -397,8 +436,8 @@ export default function MasterBarangJasa() {
         .then((res) => {
           fetchKelompokData();
           // Set form kelompok item dengan item yang baru ditambahkan
-          if (res.data && res.data.nama) {
-            setForm(prev => ({ ...prev, kelompokItem: res.data.nama }));
+          if (res.data && res.data.kode) {
+            setForm(prev => ({ ...prev, kelompokItem: res.data.kode }));
           }
           setKelompokForm({ kode: "", nama: "" });
           alert("Kelompok item berhasil disimpan!");
@@ -450,8 +489,8 @@ export default function MasterBarangJasa() {
         .then((res) => {
           fetchKategoriData();
           // Set form kategori dengan item yang baru ditambahkan
-          if (res.data && res.data.nama) {
-            setForm(prev => ({ ...prev, kategori: res.data.nama }));
+          if (res.data && res.data.kode) {
+            setForm(prev => ({ ...prev, kategori: res.data.kode }));
           }
           setKategoriForm({ kode: "", nama: "" });
           alert("Kategori berhasil disimpan!");
@@ -473,6 +512,34 @@ export default function MasterBarangJasa() {
     }
   };
 
+  const [formAnim, setFormAnim] = useState("fade-down");
+  const [formVisible, setFormVisible] = useState(true);
+
+  const handleHideForm = () => {
+    
+ setFormAnim("fade-up"); // Jalankan animasi fade-up
+  setTimeout(() => {
+    setFormVisible(false); // Sembunyikan form setelah animasi selesai
+  }, 300); // durasi animasi harus sama dengan CSS
+  };
+
+  const handleShowForm = () => {
+    setFormVisible(true);
+    setTimeout(() => setFormAnim("fade-down"), 10);
+  };
+
+  // Fungsi untuk mendapatkan nama kategori berdasarkan kode
+  const getKategoriNama = (kode) => {
+    const found = kategoriData.find(item => item.kode === kode);
+    return found ? found.nama : kode || "-";
+  };
+
+  // Fungsi untuk mendapatkan nama kelompok item berdasarkan kode
+  const getKelompokNama = (kode) => {
+    const found = kelompokData.find(item => item.kode === kode);
+    return found ? found.nama : kode || "-";
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -481,90 +548,124 @@ export default function MasterBarangJasa() {
            Barang Dan Jasa
         </h1>
       </div>
-      
-      {/* Form Input */}
-      <div className="w-full">
-        <div className="rounded-xl shadow-lg p-6 border"
-             style={{ background: theme.formColor }}>
-          {!showForm ? (
-            <div className="flex justify-end">
+
+      {/* Form Input Barang/Jasa & Akun GL */}
+      {formVisible ? (
+        <div
+          className={`rounded-xl shadow-lg p-6 border ${formAnim}`}
+          style={{ background: theme.formColor }}
+        >
+          <div className="flex justify-end mb-4">
+            <button
+              onClick={handleHideForm}
+              className="px-4 py-2 rounded-lg font-semibold transition-all duration-300 ease-in-out flex items-center gap-2"
+              style={{
+                background: theme.buttonUpdate,
+                color: "#fff",
+                fontFamily: theme.fontFamily,
+              }}
+              type="button"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+              Sembunyikan Form
+            </button>
+          </div>
+          <form onSubmit={handleSubmit}>
+            {/* Tab Navigation di dalam form */}
+            <div className="flex gap-2 mb-4">
               <button
-                onClick={() => setShowForm(true)}
-                className="px-4 py-2 rounded-lg font-semibold transition-all duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2"
-                style={{
-                  background: theme.buttonUpdate,
-                  color: "#fff",
-                  fontFamily: theme.fontFamily,
-                  animation: 'fadeDown 0.5s ease-out'
-                }}
+                className={`px-4 py-2 rounded-lg font-semibold transition ${activeTab === "Umum" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+                onClick={e => { e.preventDefault(); setActiveTab("Umum"); }}
+                style={{ fontFamily: theme.fontFamily }}
                 type="button"
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                </svg>
-                Tampilkan Form
+                Umum
+              </button>
+              <button
+                className={`px-4 py-2 rounded-lg font-semibold transition ${activeTab === "AkunGL" ? "bg-blue-500 text-white" : "bg-gray-200"}`}
+                onClick={e => { e.preventDefault(); setActiveTab("AkunGL"); }}
+                style={{ fontFamily: theme.fontFamily }}
+                type="button"
+              >
+                Akun GL
               </button>
             </div>
-          ) : (
-            <div 
-              className="transition-all duration-500 ease-in-out"
-              style={{ animation: 'fadeUp 0.5s ease-out' }}
-            >
-              <form onSubmit={handleSubmit}>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                  <div className="flex justify-end md:col-span-2 lg:col-span-3 xl:col-span-4">
+
+            {/* Tab Content di dalam form */}
+            {activeTab === "Umum" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                <div>
+                  <label className="block mb-1 font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Jenis
+                  </label>
+                  <select
+                    name="jenis"
+                    value={form.jenis}
+                    onChange={handleChange}
+                    className="w-full border rounded-lg px-4 py-2 transition"
+                    required
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
+                  >
+                    <option value="BARANG">Barang</option>
+                    <option value="JASA">Jasa</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Kode
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      name="kode"
+                      value={form.kode}
+                      onChange={handleChange}
+                      className="flex-1 border rounded-lg px-4 py-2 transition"
+                      placeholder="Contoh: BRG001"
+                      required
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                      }}
+                    />
                     <button
-                      onClick={() => setShowForm(false)}
-                      className="px-4 py-2 rounded-lg font-semibold transition-all duration-300 ease-in-out transform hover:scale-105 flex items-center gap-2 text-sm"
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, kode: generateKode() }))}
+                      className="px-3 py-2 rounded-lg transition text-sm"
                       style={{
                         background: theme.buttonUpdate,
                         color: "#fff",
                         fontFamily: theme.fontFamily,
                       }}
-                      type="button"
+                      title="Generate kode otomatis"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-                      </svg>
-                      Sembunyikan Form
+                      Auto
                     </button>
                   </div>
-              
-              <div>
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Jenis
-                </label>
-                <select
-                  name="jenis"
-                  value={form.jenis}
-                  onChange={handleChange}
-                  className="w-full border rounded-lg px-4 py-2 transition"
-                  required
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                  }}
-                >
-                  <option value="BARANG">Barang</option>
-                  <option value="JASA">Jasa</option>
-                </select>
-              </div>
+                </div>
 
-              <div>
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Kode
-                </label>
-                <div className="flex gap-2">
+                <div>
+                  <label className="block mb-1 font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Nama
+                  </label>
                   <input
                     type="text"
-                    name="kode"
-                    value={form.kode}
+                    name="nama"
+                    value={form.nama}
                     onChange={handleChange}
-                    className="flex-1 border rounded-lg px-4 py-2 transition"
-                    placeholder="Contoh: BRG001"
+                    className="w-full border rounded-lg px-4 py-2 transition"
+                    placeholder="Nama barang/jasa"
                     required
                     style={{
                       background: theme.fieldColor,
@@ -572,369 +673,490 @@ export default function MasterBarangJasa() {
                       fontFamily: theme.fontFamily,
                     }}
                   />
-                  <button
-                    type="button"
-                    onClick={() => setForm(prev => ({ ...prev, kode: generateKode() }))}
-                    className="px-3 py-2 rounded-lg transition text-sm"
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Kelompok Item
+                  </label>
+                  <select
+                    name="kelompokItem"
+                    value={form.kelompokItem}
+                    onChange={e => {
+                      if (e.target.value === "__add_new__") {
+                        setShowKelompokModal(true);
+                      } else {
+                        handleChange(e);
+                      }
+                    }}
+                    className="w-full border rounded-lg px-4 py-2 transition"
                     style={{
-                      background: theme.buttonUpdate,
-                      color: "#fff",
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
                       fontFamily: theme.fontFamily,
                     }}
-                    title="Generate kode otomatis"
                   >
-                    Auto
-                  </button>
+                    <option value="">Pilih Kelompok Item</option>
+                    {kelompokData.map((item) => (
+                      <option key={item.id} value={item.kode}>
+                        {item.nama}
+                      </option>
+                    ))}
+                    <option value="__add_new__" style={{ fontWeight: 'bold', color: '#0066cc' }}>
+                      + Tambah Kelompok Item
+                    </option>
+                  </select>
                 </div>
-              </div>
 
-              <div>
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Nama
-                </label>
-                <input
-                  type="text"
-                  name="nama"
-                  value={form.nama}
-                  onChange={handleChange}
-                  className="w-full border rounded-lg px-4 py-2 transition"
-                  placeholder="Nama barang/jasa"
-                  required
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Kelompok Item
-                </label>
-                <select
-                  name="kelompokItem"
-                  value={form.kelompokItem}
-                  onChange={(e) => {
-                    if (e.target.value === "__add_new__") {
-                      setShowKelompokModal(true);
-                    } else {
-                      handleChange(e);
-                    }
-                  }}
-                  className="w-full border rounded-lg px-4 py-2 transition"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                  }}
-                >
-                  <option value="">Pilih Kelompok Item</option>
-                  {kelompokData.map((item) => (
-                    <option key={item.id} value={item.nama}>
-                      {item.nama}
-                    </option>
-                  ))}
-                  <option value="__add_new__" style={{ fontWeight: 'bold', color: '#0066cc' }}>
-                    + Tambah Kelompok Item
-                  </option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Kategori
-                </label>
-                <select
-                  name="kategori"
-                  value={form.kategori}
-                  onChange={(e) => {
-                    if (e.target.value === "__add_new__") {
-                      setShowKategoriModal(true);
-                    } else {
-                      handleChange(e);
-                    }
-                  }}
-                  className="w-full border rounded-lg px-4 py-2 transition"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                  }}
-                >
-                  <option value="">Pilih Kategori</option>
-                  {kategoriData.map((item) => (
-                    <option key={item.id} value={item.nama}>
-                      {item.nama}
-                    </option>
-                  ))}
-                  <option value="__add_new__" style={{ fontWeight: 'bold', color: '#0066cc' }}>
-                    + Tambah Kategori
-                  </option>
-                </select>
-              </div>
-
-              {form.jenis === "BARANG" && (
                 <div>
                   <label className="block mb-1 font-semibold" 
                          style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Satuan
+                    Kategori
                   </label>
-                  <input
-                    type="text"
-                    name="satuan"
-                    value={form.satuan}
-                    onChange={handleChange}
+                  <select
+                    name="kategori"
+                    value={form.kategori}
+                    onChange={e => {
+                      if (e.target.value === "__add_new__") {
+                        setShowKategoriModal(true);
+                      } else {
+                        handleChange(e);
+                      }
+                    }}
                     className="w-full border rounded-lg px-4 py-2 transition"
-                    placeholder="Contoh: pcs, kg, liter"
                     style={{
                       background: theme.fieldColor,
                       color: theme.fontColor,
                       fontFamily: theme.fontFamily,
                     }}
-                  />
+                  >
+                    <option value="">Pilih Kategori</option>
+                    {kategoriData.map((item) => (
+                      <option key={item.id} value={item.kode}>
+                        {item.nama}
+                      </option>
+                    ))}
+                    <option value="__add_new__" style={{ fontWeight: 'bold', color: '#0066cc' }}>
+                      + Tambah Kategori
+                    </option>
+                  </select>
                 </div>
-              )}
 
-              <div>
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Harga Beli
-                </label>
-                <input
-                  type="text"
-                  name="hargaBeli"
-                  value={formattedHargaBeli}
-                  onChange={handleChange}
-                  onBlur={() => handleHargaBlur("hargaBeli")}
-                  onFocus={() => handleHargaFocus("hargaBeli")}
-                  className="w-full border rounded-lg px-4 py-2 transition"
-                  placeholder="0.00"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Harga Jual
-                </label>
-                <input
-                  type="text"
-                  name="hargaJual"
-                  value={formattedHargaJual}
-                  onChange={handleChange}
-                  onBlur={() => handleHargaBlur("hargaJual")}
-                  onFocus={() => handleHargaFocus("hargaJual")}
-                  className="w-full border rounded-lg px-4 py-2 transition"
-                  placeholder="0.00"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                  }}
-                />
-              </div>
-
-              {form.jenis === "BARANG" && (
-                <div>
-                  <label className="block mb-1 font-semibold" 
-                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Stok Minimal
-                  </label>
-                  <input
-                    type="number"
-                    name="stokMinimal"
-                    value={form.stokMinimal}
-                    onChange={handleChange}
-                    className="w-full border rounded-lg px-4 py-2 transition"
-                    placeholder="0"
-                    min="0"
-                    style={{
-                      background: theme.fieldColor,
-                      color: theme.fontColor,
-                      fontFamily: theme.fontFamily,
-                    }}
-                  />
-                </div>
-              )}
-
-              <div className="md:col-span-2 lg:col-span-3 xl:col-span-4">
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Deskripsi
-                </label>
-                <textarea
-                  name="deskripsi"
-                  value={form.deskripsi}
-                  onChange={handleChange}
-                  rows="3"
-                  className="w-full border rounded-lg px-4 py-2 transition"
-                  placeholder="Deskripsi opsional"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                  }}
-                />
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="diJual"
-                  checked={form.diJual}
-                  onChange={handleChange}
-                  id="diJual"
-                  className="rounded"
-                />
-                <label htmlFor="diJual" className="font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Dijual
-                </label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="diBeli"
-                  checked={form.diBeli}
-                  onChange={handleChange}
-                  id="diBeli"
-                  className="rounded"
-                />
-                <label htmlFor="diBeli" className="font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Dibeli
-                </label>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
-                  name="aktif"
-                  checked={form.aktif}
-                  onChange={handleChange}
-                  id="aktif"
-                  className="rounded"
-                />
-                <label htmlFor="aktif" className="font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Aktif
-                </label>
-              </div>
-
-              <div className="md:col-span-2 lg:col-span-3 xl:col-span-4">
-                <label className="block mb-1 font-semibold" 
-                       style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Gambar Produk
-                </label>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
+                {form.jenis === "BARANG" && (
+                  <div>
+                    <label className="block mb-1 font-semibold" 
+                           style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Satuan
+                    </label>
                     <input
-                      type="file"
-                      accept="image/*"
-                      onChange={handleImageChange}
-                      className="border rounded-lg px-4 py-2 transition"
+                      type="text"
+                      name="satuan"
+                      value={form.satuan}
+                      onChange={handleChange}
+                      className="w-full border rounded-lg px-4 py-2 transition"
+                      placeholder="Contoh: pcs, kg, liter"
                       style={{
                         background: theme.fieldColor,
                         color: theme.fontColor,
                         fontFamily: theme.fontFamily,
                       }}
                     />
-                    {imagePreview && (
-                      <button
-                        type="button"
-                        onClick={removeImage}
-                        className="px-3 py-2 rounded-lg font-semibold transition text-sm"
-                        style={{
-                          background: theme.buttonHapus,
-                          color: "#fff",
-                          fontFamily: theme.fontFamily,
-                        }}
-                      >
-                        Hapus Gambar
-                      </button>
-                    )}
                   </div>
-                  
-                  {imagePreview && (
-                    <div className="border rounded-lg p-4" style={{ background: theme.fieldColor }}>
-                      <p className="text-sm mb-2" style={{ color: theme.fontColor }}>Preview:</p>
-                      <img
-                        src={imagePreview}
-                        alt="Preview"
-                        className="max-w-xs max-h-48 object-contain border rounded"
-                      />
-                    </div>
-                  )}
-                  
-                  <p className="text-xs text-gray-500">
-                    Format yang didukung: JPG, PNG, GIF. Maksimal 5MB.
-                  </p>
-                </div>
-              </div>
+                )}
 
-              {error && (
-                <div className="md:col-span-2 lg:col-span-3 xl:col-span-4">
-                  <div className="text-red-500 text-sm">{error}</div>
-                </div>
-              )}
-              
-              <div className="md:col-span-2 lg:col-span-3 xl:col-span-4">
-                <div className="flex gap-2 justify-end">
-                  <button
-                    type="submit"
-                    className="px-6 py-2 rounded-lg font-semibold transition"
+                <div>
+                  <label className="block mb-1 font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Harga Beli
+                  </label>
+                  <input
+                    type="text"
+                    name="hargaBeli"
+                    value={formattedHargaBeli}
+                    onChange={handleChange}
+                    onBlur={() => handleHargaBlur("hargaBeli")}
+                    onFocus={() => handleHargaFocus("hargaBeli")}
+                    className="w-full border rounded-lg px-4 py-2 transition"
+                    placeholder="0.00"
                     style={{
-                      background: theme.buttonSimpan,
-                      color: "#fff",
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
                       fontFamily: theme.fontFamily,
                     }}
+                  />
+                </div>
+
+                <div>
+                  <label className="block mb-1 font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Harga Jual
+                  </label>
+                  <input
+                    type="text"
+                    name="hargaJual"
+                    value={formattedHargaJual}
+                    onChange={handleChange}
+                    onBlur={() => handleHargaBlur("hargaJual")}
+                    onFocus={() => handleHargaFocus("hargaJual")}
+                    className="w-full border rounded-lg px-4 py-2 transition"
+                    placeholder="0.00"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
+                  />
+                </div>
+
+                {form.jenis === "BARANG" && (
+                  <div>
+                    <label className="block mb-1 font-semibold" 
+                           style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Stok Minimal
+                    </label>
+                    <input
+                      type="number"
+                      name="stokMinimal"
+                      value={form.stokMinimal}
+                      onChange={handleChange}
+                      className="w-full border rounded-lg px-4 py-2 transition"
+                      placeholder="0"
+                      min="0"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                      }}
+                    />
+                  </div>
+                )}
+
+                <div className="md:col-span-2 lg:col-span-3 xl:col-span-4">
+                  <label className="block mb-1 font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Deskripsi
+                  </label>
+                  <textarea
+                    name="deskripsi"
+                    value={form.deskripsi}
+                    onChange={handleChange}
+                    rows="3"
+                    className="w-full border rounded-lg px-4 py-2 transition"
+                    placeholder="Deskripsi opsional"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="diJual"
+                    checked={form.diJual}
+                    onChange={handleChange}
+                    id="diJual"
+                    className="rounded"
+                  />
+                  <label htmlFor="diJual" className="font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Dijual
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="diBeli"
+                    checked={form.diBeli}
+                    onChange={handleChange}
+                    id="diBeli"
+                    className="rounded"
+                  />
+                  <label htmlFor="diBeli" className="font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Dibeli
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    name="aktif"
+                    checked={form.aktif}
+                    onChange={handleChange}
+                    id="aktif"
+                    className="rounded"
+                  />
+                  <label htmlFor="aktif" className="font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Aktif
+                  </label>
+                </div>
+
+                <div className="md:col-span-2 lg:col-span-3 xl:col-span-4">
+                  <label className="block mb-1 font-semibold" 
+                         style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Gambar Produk
+                  </label>
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                        className="border rounded-lg px-4 py-2 transition"
+                        style={{
+                          background: theme.fieldColor,
+                          color: theme.fontColor,
+                          fontFamily: theme.fontFamily,
+                        }}
+                      />
+                      {imagePreview && (
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="px-3 py-2 rounded-lg font-semibold transition text-sm"
+                          style={{
+                            background: theme.buttonHapus,
+                            color: "#fff",
+                            fontFamily: theme.fontFamily,
+                          }}
+                        >
+                          Hapus Gambar
+                        </button>
+                      )}
+                    </div>
+                    
+                    {imagePreview && (
+                      <div className="border rounded-lg p-4" style={{ background: theme.fieldColor }}>
+                        <p className="text-sm mb-2" style={{ color: theme.fontColor }}>Preview:</p>
+                        <img
+                          src={imagePreview}
+                          alt="Preview"
+                          className="max-w-xs max-h-48 object-contain border rounded"
+                        />
+                      </div>
+                    )}
+                    
+                    <p className="text-xs text-gray-500">
+                      Format yang didukung: JPG, PNG, GIF. Maksimal 5MB.
+                    </p>
+                  </div>
+                </div>
+
+                {error && (
+                  <div className="md:col-span-2 lg:col-span-3 xl:col-span-4">
+                    <div className="text-red-500 text-sm">{error}</div>
+                  </div>
+                )}                
+              </div>
+            )}
+
+            {activeTab === "AkunGL" && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Akun Persediaan
+                  </label>
+                  <select
+                    value={glAccount.persediaan}
+                    onChange={e => setGlAccount(prev => ({ ...prev, persediaan: e.target.value }))}
+                    className="w-full border rounded-lg px-4 py-2"
+                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                    required
                   >
-                    {editId ? 'Update' : 'Simpan'}
-                  </button>
+                    <option value="">Pilih Akun Persediaan</option>
+                    {coaList.map(coa => (
+                      <option key={coa.id} value={coa.kode}>
+                        {coa.kode} - {coa.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Akun Penjualan
+                  </label>
+                  <select
+                    value={glAccount.penjualan}
+                    onChange={e => setGlAccount(prev => ({ ...prev, penjualan: e.target.value }))}
+                    className="w-full border rounded-lg px-4 py-2"
+                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                    required
+                  >
+                    <option value="">Pilih Akun Penjualan</option>
+                    {coaList.map(coa => (
+                      <option key={coa.id} value={coa.kode}>
+                        {coa.kode} - {coa.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Akun Retur Penjualan
+                  </label>
+                  <select
+                    value={glAccount.returPenjualan}
+                    onChange={e => setGlAccount(prev => ({ ...prev, returPenjualan: e.target.value }))}
+                    className="w-full border rounded-lg px-4 py-2"
+                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                    required
+                  >
+                    <option value="">Pilih Akun Retur Penjualan</option>
+                    {coaList.map(coa => (
+                      <option key={coa.id} value={coa.kode}>
+                        {coa.kode} - {coa.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Akun Diskon Penjualan
+                  </label>
+                  <select
+                    value={glAccount.diskonPenjualan}
+                    onChange={e => setGlAccount(prev => ({ ...prev, diskonPenjualan: e.target.value }))}
+                    className="w-full border rounded-lg px-4 py-2"
+                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                    required
+                  >
+                    <option value="">Pilih Akun Diskon Penjualan</option>
+                    {coaList.map(coa => (
+                      <option key={coa.id} value={coa.kode}>
+                        {coa.kode} - {coa.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Akun HPP
+                  </label>
+                  <select
+                    value={glAccount.hpp}
+                    onChange={e => setGlAccount(prev => ({ ...prev, hpp: e.target.value }))}
+                    className="w-full border rounded-lg px-4 py-2"
+                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                    required
+                  >
+                    <option value="">Pilih Akun HPP</option>
+                    {coaList.map(coa => (
+                      <option key={coa.id} value={coa.kode}>
+                        {coa.kode} - {coa.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Akun Retur Pembelian
+                  </label>
+                  <select
+                    value={glAccount.returPembelian}
+                    onChange={e => setGlAccount(prev => ({ ...prev, returPembelian: e.target.value }))}
+                    className="w-full border rounded-lg px-4 py-2"
+                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                    required
+                  >
+                    <option value="">Pilih Akun Retur Pembelian</option>
+                    {coaList.map(coa => (
+                      <option key={coa.id} value={coa.kode}>
+                        {coa.kode} - {coa.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                    Akun Diskon Khusus
+                  </label>
+                  <select
+                    value={glAccount.diskonKhusus}
+                    onChange={e => setGlAccount(prev => ({ ...prev, diskonKhusus: e.target.value }))}
+                    className="w-full border rounded-lg px-4 py-2"
+                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                    required
+                  >
+                    <option value="">Pilih Akun Diskon Khusus</option>
+                    {coaList.map(coa => (
+                      <option key={coa.id} value={coa.kode}>
+                        {coa.kode} - {coa.nama}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
+            {/* Tombol submit dan reset hanya satu kali di bawah tab content */}
+            <div className="md:col-span-2 lg:col-span-3 xl:col-span-4 mt-6">
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="submit"
+                  className="px-6 py-2 rounded-lg font-semibold transition"
+                  style={{
+                    background: theme.buttonSimpan,
+                    color: "#fff",
+                    fontFamily: theme.fontFamily,
+                  }}
+                >
+                  {editId ? 'Update' : 'Simpan'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleResetForm}
+                  className="px-4 py-2 rounded-lg font-semibold transition"
+                  style={{
+                    background: theme.buttonRefresh,
+                    color: "#fff",
+                    fontFamily: theme.fontFamily,
+                  }}
+                >
+                  Kosongkan
+                </button>
+                {editId && (
                   <button
                     type="button"
                     onClick={handleResetForm}
                     className="px-4 py-2 rounded-lg font-semibold transition"
                     style={{
-                      background: theme.buttonRefresh,
+                      background: theme.buttonHapus,
                       color: "#fff",
                       fontFamily: theme.fontFamily,
                     }}
                   >
-                    Kosongkan
+                    Cancel
                   </button>
-                  {editId && (
-                    <button
-                      type="button"
-                      onClick={handleResetForm}
-                      className="px-4 py-2 rounded-lg font-semibold transition"
-                      style={{
-                        background: theme.buttonHapus,
-                        color: "#fff",
-                        fontFamily: theme.fontFamily,
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
+                )}
               </div>
             </div>
-            </form>
-            </div>
-          )}
+          </form>
         </div>
-      </div>
+      ) : (
+        <div className="flex justify-end">
+          <button
+            onClick={handleShowForm}
+            className="px-4 py-2 rounded-lg font-semibold transition-all duration-300 ease-in-out flex items-center gap-2"
+            style={{
+              background: theme.buttonUpdate,
+              color: "#fff",
+              fontFamily: theme.fontFamily,
+            }}
+            type="button"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+            Tampilkan Form
+          </button>
+        </div>
+      )}
 
       {/* Tabel Data */}
       <div className="w-full">
@@ -1067,8 +1289,8 @@ export default function MasterBarangJasa() {
                       {row.jenis}
                     </span>
                   </td>
-                  <td className="px-3 py-2">{row.kelompokItem || "-"}</td>
-                  <td className="px-3 py-2">{row.kategori || "-"}</td>
+                  <td className="px-3 py-2">{getKelompokNama(row.kelompokItem)}</td>
+                  <td className="px-3 py-2">{getKategoriNama(row.kategori)}</td>
                   <td className="px-3 py-2">{row.satuan || "-"}</td>
                   <td className="px-3 py-2 text-right">
                     {row.hargaBeli ? formatNumber(row.hargaBeli) : "-"}
@@ -1145,7 +1367,6 @@ export default function MasterBarangJasa() {
                   setShowKelompokModal(false);
                   setKelompokForm({ kode: "", nama: "" });
                   setEditKelompokId(null);
-                  // Reset dropdown jika user membatalkan
                   if (form.kelompokItem === "__add_new__") {
                     setForm(prev => ({ ...prev, kelompokItem: "" }));
                   }
@@ -1157,7 +1378,6 @@ export default function MasterBarangJasa() {
                 </svg>
               </button>
             </div>
-            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Form Input */}
               <div>
@@ -1213,26 +1433,6 @@ export default function MasterBarangJasa() {
                       }}
                     >
                       {editKelompokId ? 'Update' : 'Simpan'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowKelompokModal(false);
-                        setKelompokForm({ kode: "", nama: "" });
-                        setEditKelompokId(null);
-                        // Reset dropdown jika user membatalkan
-                        if (form.kelompokItem === "__add_new__") {
-                          setForm(prev => ({ ...prev, kelompokItem: "" }));
-                        }
-                      }}
-                      className="px-4 py-2 rounded-lg font-semibold transition"
-                      style={{
-                        background: theme.buttonRefresh,
-                        color: "#fff",
-                        fontFamily: theme.fontFamily,
-                      }}
-                    >
-                      Tutup Modal
                     </button>
                     {editKelompokId && (
                       <button
@@ -1325,7 +1525,6 @@ export default function MasterBarangJasa() {
                   setShowKategoriModal(false);
                   setKategoriForm({ kode: "", nama: "" });
                   setEditKategoriId(null);
-                  // Reset dropdown jika user membatalkan
                   if (form.kategori === "__add_new__") {
                     setForm(prev => ({ ...prev, kategori: "" }));
                   }
@@ -1337,7 +1536,6 @@ export default function MasterBarangJasa() {
                 </svg>
               </button>
             </div>
-            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Form Input */}
               <div>
@@ -1393,26 +1591,6 @@ export default function MasterBarangJasa() {
                       }}
                     >
                       {editKategoriId ? 'Update' : 'Simpan'}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowKategoriModal(false);
-                        setKategoriForm({ kode: "", nama: "" });
-                        setEditKategoriId(null);
-                        // Reset dropdown jika user membatalkan
-                        if (form.kategori === "__add_new__") {
-                          setForm(prev => ({ ...prev, kategori: "" }));
-                        }
-                      }}
-                      className="px-4 py-2 rounded-lg font-semibold transition"
-                      style={{
-                        background: theme.buttonRefresh,
-                        color: "#fff",
-                        fontFamily: theme.fontFamily,
-                      }}
-                    >
-                      Tutup Modal
                     </button>
                     {editKategoriId && (
                       <button
