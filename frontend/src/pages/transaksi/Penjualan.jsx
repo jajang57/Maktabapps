@@ -365,9 +365,48 @@ useEffect(() => {
       <Card className="p-8 rounded-xl shadow-lg mb-8" style={{ background: theme.cardColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.cardBorderColor }}>
         {/* Header & Tombol Tampilkan Form */}
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold">Form Input</h2>
+          <h2 className="text-lg font-bold">
+            {editMode ? "Edit Data" : "Input Data"}
+          </h2>
           <Button
-            onClick={() => setShowForm(!showForm)}
+            onClick={() => {
+              if (showForm) {
+                // Sembunyikan form & reset
+                setShowForm(false);
+                setEditMode(false);
+                setEditId(null);
+                setFormData({
+                  nomorInvoice: '',
+                  tanggal: new Date().toISOString().split('T')[0],
+                  dueDate: '',
+                  customer: '',
+                  gudang: '',
+                  termPembayaran: '',
+                  departement: '',
+                  nomorEfaktur: '',
+                  notes: '',
+                  freight: 0,
+                  stamp: 0
+                });
+                setItems([{
+                  id: 1,
+                  kodeItem: '',
+                  namaItem: '',
+                  qty: 0,
+                  unit: '',
+                  price: 0,
+                  discPercent: 0,
+                  discAmountItem: 0,
+                  discAmount: 0,
+                  tax: 0,
+                  amount: 0
+                }]);
+                generateNomorInvoice();
+              } else {
+                // Tampilkan form
+                setShowForm(true);
+              }
+            }}
             style={{
               background: showForm ? theme.buttonHapus : theme.buttonSimpan,
               color: "#fff",
@@ -386,36 +425,56 @@ useEffect(() => {
             {/* Form Input Atas */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
               <div>
-                <label className="block font-semibold mb-1 text-gray-700">Customer</label>
-               <select
-                name="customer"
-                value={formData.customer}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border rounded"
-                style={{ ...inputStyle(theme) }}
-              >
-                <option value="">Pilih Customer</option>
-                {masterPembeli.map(p => (
-                  <option key={p.id} value={String(p.ID)}>{p.nama}</option>
-                ))}
-              </select>
+                <label
+                  className="block font-semibold mb-1"
+                  style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily
+                  }}
+                >
+                  Customer
+                </label>
+                <select
+                  name="customer"
+                  value={formData.customer}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded"
+                  style={{ ...inputStyle(theme) }}
+                >
+                  <option value="">Pilih Customer</option>
+                  {masterPembeli.map(p => (
+                    <option key={p.id} value={String(p.ID)}>{p.nama}</option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-gray-700">Invoice No.</label>
+                <label className="block font-semibold mb-1 text-gray-700" style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily
+                  }}>Invoice No.</label>
                 <Input name="nomorInvoice" value={formData.nomorInvoice} readOnly style={{ ...inputStyle(theme) }} />
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-gray-700">Tanggal</label>
+                <label className="block font-semibold mb-1 text-gray-700" style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily
+                  }}>Tanggal</label>
                 <Input type="date" name="tanggal" value={formData.tanggal} onChange={handleInputChange} style={{ ...inputStyle(theme) }} />
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-gray-700">Due Date</label>
+                <label className="block font-semibold mb-1 text-gray-700" style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily
+                  }}>Due Date</label>
                 <Input type="date" name="dueDate" value={formData.dueDate} onChange={handleInputChange} style={{ ...inputStyle(theme) }} />
               </div>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               <div>
-                <label className="block font-semibold mb-1 text-gray-700">Gudang</label>
+                <label className="block font-semibold mb-1 text-gray-700" style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily
+                  }}>Gudang</label>
                 <select
                   name="gudang"
                   value={formData.gudang}
@@ -430,7 +489,10 @@ useEffect(() => {
                 </select>
               </div>
               <div>
-                <label className="block font-semibold mb-1 text-gray-700">Departement</label>
+                <label className="block font-semibold mb-1 text-gray-700" style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily
+                  }}>Departement</label>
                 <select
                   name="departement"
                   value={formData.departement}
@@ -545,11 +607,17 @@ useEffect(() => {
               {/* Kiri: Nomor eFaktur & Notes */}
               <div className="space-y-4">
                 <div>
-                  <label className="block font-semibold mb-1 text-gray-700">Nomor eFaktur</label>
+                  <label className="block font-semibold mb-1 text-gray-700"style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily
+                  }}>Nomor eFaktur</label>
                   <Input name="nomorEfaktur" value={formData.nomorEfaktur} onChange={handleInputChange} style={{ ...inputStyle(theme) }} />
                 </div>
                 <div>
-                  <label className="block font-semibold mb-1 text-gray-700">Notes</label>
+                  <label className="block font-semibold mb-1 text-gray-700" style={{
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily
+                  }}>Notes</label>
                   <textarea
                     name="notes"
                     value={formData.notes}
@@ -600,19 +668,19 @@ useEffect(() => {
                     {editMode ? "Update" : "Simpan"}
                   </Button>
                   <Button
-  onClick={handleDelete}
-  style={{
-    background: theme.buttonKosongkan || "#6366f1",
-    color: "#fff",
-    fontFamily: theme.fontFamily,
-    border: `2px solid ${theme.buttonKosongkan || "#6366f1"}`,
-    width: "100%",
-    fontSize: 16,
-    padding: "12px 0"
-  }}
->
-  Kosongkan
-</Button>
+                    onClick={handleDelete}
+                    style={{
+                      background: theme.buttonKosongkan || "#6366f1",
+                      color: "#fff",
+                      fontFamily: theme.fontFamily,
+                      border: `2px solid ${theme.buttonKosongkan || "#6366f1"}`,
+                      width: "100%",
+                      fontSize: 16,
+                      padding: "12px 0"
+                    }}
+                  >
+                  Kosongkan
+                </Button>
                 </div>
               </div>
             </div>
