@@ -621,63 +621,73 @@ useEffect(() => {
       </Card>
 
       {/* Card List Transaksi Penjualan */}
-      <Card className="p-8 rounded-xl shadow-lg" style={{ background: theme.cardColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.cardBorderColor }}>
-        <h2 className="text-lg font-bold mb-4">Daftar Transaksi Penjualan</h2>
-        <div className="flex gap-2 mb-2">
-          <Input
-            placeholder="Cari invoice/customer/total"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            style={{ width: 260, background: "#f7f7fa" }}
-          />
-          <Button style={{ background: "#4ade80", color: "#fff", fontWeight: "bold", borderRadius: 8 }}>
-            Print
-          </Button>
-        </div>
-        <div className="overflow-x-auto rounded-lg border mb-4" style={{ borderColor: theme.cardBorderColor }}>
-          <table className="w-full border-collapse">
-            <thead style={{ background: "#e0e7ff", color: "#222", fontWeight: "bold" }}>
-              <tr>
-                <th className="px-3 py-2">Invoice No.</th>
-                <th className="px-3 py-2">Tanggal</th>
-                <th className="px-3 py-2 w-48 text-left">Customer</th>
-                <th className="px-3 py-2">Total</th>
-                <th className="px-3 py-2">Status</th>
-                <th className="px-3 py-2">Aksi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPenjualan.map(trx => (
-                <tr key={trx.id} style={{ background: "#fff" }}>
-                  <td className="px-2 py-1">{trx.nomorInvoice}</td>
-                  <td className="px-2 py-1">{trx.tanggal ? new Date(trx.tanggal).toLocaleDateString('id-ID') : ''}</td>
-                  <td className="px-2 py-1">
-                    {masterPembeli.find(p => String(p.ID) === String(trx.customerId))?.nama || '-'}
-                  </td>
-                  <td className="px-2 py-1 text-right">Rp {trx.total?.toLocaleString('id-ID')}</td>
-                  <td className="px-2 py-1">
-                    <span className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-semibold">{trx.status}</span>
-                  </td>
-                  <td className="px-2 py-1 flex gap-2">
-                    <Button
-                      style={{ background: "#fbbf24", color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
-                      onClick={() => handleEdit(trx)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      style={{ background: "#ef4444", color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
-                      onClick={() => handleDeleteTransaksi(trx.id)}
-                    >
-                      Hapus
-                    </Button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <Card className="p-8 rounded-xl shadow-lg" style={{
+  background: theme.cardColor,
+  color: theme.fontColor,
+  fontFamily: theme.fontFamily,
+  borderColor: theme.cardBorderColor
+}}>
+  <h2 className="text-lg font-bold mb-4" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+    Daftar Transaksi Penjualan
+  </h2>
+  <div className="flex gap-2 mb-2">
+    <Input
+      placeholder="Cari invoice/customer/total"
+      value={search}
+      onChange={e => setSearch(e.target.value)}
+      style={{ width: 260, background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.dropdownColor }}
+    />
+    <Button style={{ background: theme.buttonSimpan, color: "#fff", fontWeight: "bold", borderRadius: 8 }}>
+      Print
+    </Button>
+  </div>
+  <div className="overflow-x-auto rounded-lg border mb-4" style={{ borderColor: theme.cardBorderColor }}>
+    <table className="w-full border-collapse" style={{ fontFamily: theme.tableFontFamily }}>
+      <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
+        <tr>
+          <th className="px-3 py-2">Invoice No.</th>
+          <th className="px-3 py-2">Tanggal</th>
+          <th className="px-3 py-2 w-48 text-left">Customer</th>
+          <th className="px-3 py-2">Total</th>
+          <th className="px-3 py-2">Status</th>
+          <th className="px-3 py-2">Aksi</th>
+        </tr>
+      </thead>
+      <tbody>
+        {filteredPenjualan.map((trx, idx) => (
+          <tr key={trx.id} style={{
+            background: idx % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor,
+            color: theme.tableFontColor
+          }}>
+            <td className="px-2 py-1">{trx.nomorInvoice}</td>
+            <td className="px-2 py-1">{trx.tanggal ? new Date(trx.tanggal).toLocaleDateString('id-ID') : ''}</td>
+            <td className="px-2 py-1">
+              {masterPembeli.find(p => String(p.ID) === String(trx.customerId))?.nama || '-'}
+            </td>
+            <td className="px-2 py-1 text-right">Rp {trx.total?.toLocaleString('id-ID')}</td>
+            <td className="px-2 py-1">
+              <span className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-semibold">{trx.status}</span>
+            </td>
+            <td className="px-2 py-1 flex gap-2">
+              <Button
+                style={{ background: theme.buttonUpdate, color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
+                onClick={() => handleEdit(trx)}
+              >
+                Edit
+              </Button>
+              <Button
+                style={{ background: theme.buttonHapus, color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
+                onClick={() => handleDeleteTransaksi(trx.id)}
+              >
+                Hapus
+              </Button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</Card>
     </div>
   );
 }
