@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useTheme } from "../../context/ThemeContext"; // tambahkan ini
+import { useTheme } from "../../context/ThemeContext";
 import api from "../../utils/api";
 
 function formatPhone(phone) {
@@ -9,7 +9,12 @@ function formatPhone(phone) {
 }
 
 export default function MasterPemasok() {
-  const { theme } = useTheme(); // gunakan theme
+  const { theme } = useTheme();
+  // Tambahkan state untuk toggle form dan animasi
+  const [formVisible, setFormVisible] = useState(true);
+  const [formAnim, setFormAnim] = useState("fade-down");
+  const [notifikasi, setNotifikasi] = useState("");
+
   const [pemasokList, setPemasokList] = useState([]);
   const [formData, setFormData] = useState({
     kode: "",
@@ -104,6 +109,17 @@ export default function MasterPemasok() {
     }));
   };
 
+  // Fungsi toggle form
+  const handleShowForm = () => {
+    setFormVisible(true);
+    setFormAnim("fade-down");
+  };
+  const handleHideForm = () => {
+    setFormAnim("fade-up");
+    setTimeout(() => setFormVisible(false), 300);
+  };
+
+  // Ubah notifikasi alert jadi state
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -125,17 +141,16 @@ export default function MasterPemasok() {
 
       if (editingId) {
         await api.put(`/pemasok/${editingId}`, submitData);
-        alert("Data pemasok berhasil diupdate!");
+        setNotifikasi("Data pemasok berhasil diupdate!");
       } else {
         await api.post("/pemasok", submitData);
-        alert("Data pemasok berhasil ditambahkan!");
+        setNotifikasi("Data pemasok berhasil ditambahkan!");
       }
       
       resetForm();
       fetchPemasok();
     } catch (error) {
-      console.error("Error saving pemasok:", error);
-      alert("Gagal menyimpan data pemasok");
+      setNotifikasi("Gagal menyimpan data pemasok");
     }
   };
 
@@ -171,19 +186,44 @@ export default function MasterPemasok() {
   };
 
   const handleEdit = (pemasok) => {
-    setFormData(pemasok);
-    setEditingId(pemasok.id);
+    setFormData({
+      kode: pemasok.kode || "",
+      nama: pemasok.nama || "",
+      jenisUsaha: pemasok.jenisUsaha || "",
+      alamat: pemasok.alamat || "",
+      kota: pemasok.kota || "",
+      provinsi: pemasok.provinsi || "",
+      kodePos: pemasok.kodePos || "",
+      negara: pemasok.negara || "Indonesia",
+      telepon: pemasok.telepon || "",
+      fax: pemasok.fax || "",
+      email: pemasok.email || "",
+      website: pemasok.website || "",
+      npwp: pemasok.npwp || "",
+      contactPerson: pemasok.contactPerson || "",
+      jabatanContact: pemasok.jabatanContact || "",
+      teleponContact: pemasok.teleponContact || "",
+      emailContact: pemasok.emailContact || "",
+      bank: pemasok.bank || "",
+      noRekening: pemasok.noRekening || "",
+      namaRekening: pemasok.namaRekening || "",
+      termPembayaran: pemasok.termPembayaran || "30",
+      limitKredit: pemasok.limitKredit || 0,
+      mata_uang: pemasok.mata_uang || "IDR",
+      status: pemasok.status || "Aktif",
+      keterangan: pemasok.keterangan || ""
+    });
+    setEditingId(pemasok.ID); // <-- GANTI id jadi ID
   };
 
   const handleDelete = async (id) => {
     if (confirm("Apakah Anda yakin ingin menghapus data pemasok ini?")) {
       try {
         await api.delete(`/pemasok/${id}`);
-        alert("Data pemasok berhasil dihapus!");
+        setNotifikasi("Data pemasok berhasil dihapus!");
         fetchPemasok();
       } catch (error) {
-        console.error("Error deleting pemasok:", error);
-        alert("Gagal menghapus data pemasok");
+        setNotifikasi("Gagal menghapus data pemasok");
       }
     }
   };
@@ -212,542 +252,590 @@ export default function MasterPemasok() {
 
   return (
     <div className="p-6" style={{ background: theme.backgroundColor, color: theme.fontColor, fontFamily: theme.fontFamily }}>
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Master Data Pemasok</h1>
-        <p style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Kelola data vendor/supplier perusahaan</p>
+      <div className="mb-6 flex justify-between items-center">
+        <div>
+          <h1 className="text-2xl font-bold mb-2" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Master Data Pemasok</h1>
+          <p style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Kelola data vendor/supplier perusahaan</p>
+        </div>
+  
       </div>
 
-      {/* Tab Navigation */}
-      <div className="flex space-x-2 mb-4">
-        {["utama", "alamat", "bank", "term"].map(tab => (
-          <button
-            key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 rounded-t font-semibold transition`}
-            style={{
-              background: activeTab === tab ? theme.buttonSimpan : theme.cardColor,
-              color: activeTab === tab ? "#fff" : theme.fontColor,
-              fontFamily: theme.fontFamily,
-              border: activeTab === tab ? `2px solid ${theme.buttonSimpan}` : "none",
-            }}
-          >
-            {tab === "utama" && "Data Utama"}
-            {tab === "alamat" && "Alamat & Kontak"}
-            {tab === "bank" && "Bank & Pajak"}
-            {tab === "term" && "Term & Limit"}
-          </button>
-        ))}
-      </div>
+      {notifikasi && (
+        <div className="mb-2 px-4 py-2 rounded text-sm font-semibold"
+             style={{ background: "#e0f7fa", color: "#00796b" }}>
+          {notifikasi}
+        </div>
+      )}
 
-      {/* Form Input */}
-      <div className="rounded-lg shadow p-6 mb-6" style={{ background: theme.cardColor }}>
-        <h2 className="text-lg font-semibold mb-4" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-          {editingId ? "Edit Data Pemasok" : "Tambah Data Pemasok"}
-        </h2>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {activeTab === "utama" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Kode Pemasok *
-                </label>
-                <input
-                  type="text"
-                  name="kode"
-                  value={formData.kode}
-                  onChange={handleInputChange}
-                  placeholder={generateKodePemasok()}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
+      {/* Tombol toggle dan Card form input */}
+      {formVisible ? (
+        <div className={`rounded-lg shadow p-6 mb-6 border transition-opacity duration-300 ${formAnim}`}>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+              {editingId ? "Edit Data Pemasok" : "Tambah Data Pemasok"}
+            </h2>
+            <button
+              type="button"
+              onClick={handleHideForm}
+              className="px-4 py-2 rounded font-semibold"
+              style={{ background: theme.buttonSimpan, color: "#fff", fontFamily: theme.fontFamily }}
+            >
+              Sembunyikan Form
+            </button>
+          </div>
+          {/* Tab Navigation */}
+          <div className="flex space-x-2 mb-4">
+            {["utama", "alamat", "bank", "term"].map(tab => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={`px-4 py-2 rounded-t font-semibold transition`}
+                style={{
+                  background: activeTab === tab ? theme.buttonSimpan : theme.cardColor,
+                  color: activeTab === tab ? "#fff" : theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                  border: activeTab === tab ? `2px solid ${theme.buttonSimpan}` : "none",
+                }}
+              >
+                {tab === "utama" && "Data Utama"}
+                {tab === "alamat" && "Alamat & Kontak"}
+                {tab === "bank" && "Bank & Pajak"}
+                {tab === "term" && "Term & Limit"}
+              </button>
+            ))}
+          </div>
+
+          {/* Form Input */}
+          <div className="rounded-lg shadow p-6 mb-6" style={{ background: theme.cardColor }}>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {activeTab === "utama" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Kode Pemasok *
+                    </label>
+                    <input
+                      type="text"
+                      name="kode"
+                      value={formData.kode}
+                      onChange={handleInputChange}
+                      placeholder={generateKodePemasok()}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Nama Pemasok *
+                    </label>
+                    <input
+                      type="text"
+                      name="nama"
+                      value={formData.nama}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Jenis Usaha
+                    </label>
+                    <input
+                      type="text"
+                      name="jenisUsaha"
+                      value={formData.jenisUsaha}
+                      onChange={handleInputChange}
+                      placeholder="Misal: Distributor, Manufaktur, dll"
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Status
+                    </label>
+                    <select
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    >
+                      <option value="Aktif">Aktif</option>
+                      <option value="Tidak Aktif">Tidak Aktif</option>
+                    </select>
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Keterangan
+                    </label>
+                    <textarea
+                      name="keterangan"
+                      value={formData.keterangan}
+                      onChange={handleInputChange}
+                      rows="2"
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              {activeTab === "alamat" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="md:col-span-2">
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Alamat *
+                    </label>
+                    <textarea
+                      name="alamat"
+                      value={formData.alamat}
+                      onChange={handleInputChange}
+                      required
+                      rows="3"
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Kota
+                    </label>
+                    <input
+                      type="text"
+                      name="kota"
+                      value={formData.kota}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Provinsi
+                    </label>
+                    <input
+                      type="text"
+                      name="provinsi"
+                      value={formData.provinsi}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Kode Pos
+                    </label>
+                    <input
+                      type="text"
+                      name="kodePos"
+                      value={formData.kodePos}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Negara
+                    </label>
+                    <input
+                      type="text"
+                      name="negara"
+                      value={formData.negara}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Telepon *
+                    </label>
+                    <input
+                      type="text"
+                      name="telepon"
+                      value={formData.telepon}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Fax
+                    </label>
+                    <input
+                      type="text"
+                      name="fax"
+                      value={formData.fax}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Website
+                    </label>
+                    <input
+                      type="text"
+                      name="website"
+                      value={formData.website}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Contact Person
+                    </label>
+                    <input
+                      type="text"
+                      name="contactPerson"
+                      value={formData.contactPerson}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Jabatan Contact
+                    </label>
+                    <input
+                      type="text"
+                      name="jabatanContact"
+                      value={formData.jabatanContact}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Telepon Contact
+                    </label>
+                    <input
+                      type="text"
+                      name="teleponContact"
+                      value={formData.teleponContact}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Email Contact
+                    </label>
+                    <input
+                      type="email"
+                      name="emailContact"
+                      value={formData.emailContact}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              {activeTab === "bank" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Nama Bank
+                    </label>
+                    <input
+                      type="text"
+                      name="bank"
+                      value={formData.bank}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      No. Rekening
+                    </label>
+                    <input
+                      type="text"
+                      name="noRekening"
+                      value={formData.noRekening}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Nama Rekening
+                    </label>
+                    <input
+                      type="text"
+                      name="namaRekening"
+                      value={formData.namaRekening}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      NPWP
+                    </label>
+                    <input
+                      type="text"
+                      name="npwp"
+                      value={formData.npwp}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              {activeTab === "term" && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Term Pembayaran (hari)
+                    </label>
+                    <input
+                      type="number"
+                      name="termPembayaran"
+                      value={formData.termPembayaran}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Limit Kredit
+                    </label>
+                    <input
+                      type="number"
+                      name="limitKredit"
+                      value={formData.limitKredit}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                      Mata Uang
+                    </label>
+                    <input
+                      type="text"
+                      name="mata_uang"
+                      value={formData.mata_uang}
+                      onChange={handleInputChange}
+                      className="w-full border rounded px-3 py-2 focus:outline-none"
+                      style={{
+                        background: theme.fieldColor,
+                        color: theme.fontColor,
+                        fontFamily: theme.fontFamily,
+                        borderColor: theme.dropdownColor,
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+              <div className="flex gap-2 mt-4 justify-end">
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded font-semibold"
                   style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
+                    background: theme.buttonSimpan,
+                    color: "#fff",
                     fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Nama Pemasok *
-                </label>
-                <input
-                  type="text"
-                  name="nama"
-                  value={formData.nama}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Jenis Usaha
-                </label>
-                <input
-                  type="text"
-                  name="jenisUsaha"
-                  value={formData.jenisUsaha}
-                  onChange={handleInputChange}
-                  placeholder="Misal: Distributor, Manufaktur, dll"
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Status
-                </label>
-                <select
-                  name="status"
-                  value={formData.status}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
                   }}
                 >
-                  <option value="Aktif">Aktif</option>
-                  <option value="Tidak Aktif">Tidak Aktif</option>
-                </select>
-              </div>
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Keterangan
-                </label>
-                <textarea
-                  name="keterangan"
-                  value={formData.keterangan}
-                  onChange={handleInputChange}
-                  rows="2"
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
+                  {editingId ? "Update" : "Simpan"}
+                </button>
+                <button
+                  type="button"
+                  className="px-4 py-2 rounded font-semibold"
                   style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
+                    background: "#222",
+                    color: "#fff",
                     fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
                   }}
-                />
+                  onClick={resetForm}
+                >
+                  Kosongkan
+                </button>
+                {editingId && (
+                  <button
+                    type="button"
+                    className="px-4 py-2 rounded font-semibold"
+                    style={{
+                      background: theme.buttonHapus,
+                      color: "#fff",
+                      fontFamily: theme.fontFamily,
+                    }}
+                    onClick={resetForm}
+                  >
+                    Batal
+                  </button>
+                )}
               </div>
-            </div>
-          )}
-          {activeTab === "alamat" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="md:col-span-2">
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Alamat *
-                </label>
-                <textarea
-                  name="alamat"
-                  value={formData.alamat}
-                  onChange={handleInputChange}
-                  required
-                  rows="3"
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Kota
-                </label>
-                <input
-                  type="text"
-                  name="kota"
-                  value={formData.kota}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Provinsi
-                </label>
-                <input
-                  type="text"
-                  name="provinsi"
-                  value={formData.provinsi}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Kode Pos
-                </label>
-                <input
-                  type="text"
-                  name="kodePos"
-                  value={formData.kodePos}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Negara
-                </label>
-                <input
-                  type="text"
-                  name="negara"
-                  value={formData.negara}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Telepon *
-                </label>
-                <input
-                  type="text"
-                  name="telepon"
-                  value={formData.telepon}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Fax
-                </label>
-                <input
-                  type="text"
-                  name="fax"
-                  value={formData.fax}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Email
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Website
-                </label>
-                <input
-                  type="text"
-                  name="website"
-                  value={formData.website}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Contact Person
-                </label>
-                <input
-                  type="text"
-                  name="contactPerson"
-                  value={formData.contactPerson}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Jabatan Contact
-                </label>
-                <input
-                  type="text"
-                  name="jabatanContact"
-                  value={formData.jabatanContact}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Telepon Contact
-                </label>
-                <input
-                  type="text"
-                  name="teleponContact"
-                  value={formData.teleponContact}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Email Contact
-                </label>
-                <input
-                  type="email"
-                  name="emailContact"
-                  value={formData.emailContact}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          {activeTab === "bank" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Nama Bank
-                </label>
-                <input
-                  type="text"
-                  name="bank"
-                  value={formData.bank}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  No. Rekening
-                </label>
-                <input
-                  type="text"
-                  name="noRekening"
-                  value={formData.noRekening}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Nama Rekening
-                </label>
-                <input
-                  type="text"
-                  name="namaRekening"
-                  value={formData.namaRekening}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  NPWP
-                </label>
-                <input
-                  type="text"
-                  name="npwp"
-                  value={formData.npwp}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          {activeTab === "term" && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Term Pembayaran (hari)
-                </label>
-                <input
-                  type="number"
-                  name="termPembayaran"
-                  value={formData.termPembayaran}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Limit Kredit
-                </label>
-                <input
-                  type="number"
-                  name="limitKredit"
-                  value={formData.limitKredit}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                  Mata Uang
-                </label>
-                <input
-                  type="text"
-                  name="mata_uang"
-                  value={formData.mata_uang}
-                  onChange={handleInputChange}
-                  className="w-full border rounded px-3 py-2 focus:outline-none"
-                  style={{
-                    background: theme.fieldColor,
-                    color: theme.fontColor,
-                    fontFamily: theme.fontFamily,
-                    borderColor: theme.dropdownColor,
-                  }}
-                />
-              </div>
-            </div>
-          )}
-          <div className="flex gap-2 mt-4">
-            <button
-              type="submit"
-              className="px-4 py-2 rounded font-semibold"
-              style={{
-                background: theme.buttonSimpan,
-                color: "#fff",
-                fontFamily: theme.fontFamily,
-              }}
-            >
-              {editingId ? "Update" : "Simpan"}
-            </button>
-            {editingId && (
-              <button
-                type="button"
-                className="px-4 py-2 rounded font-semibold"
-                style={{
-                  background: theme.buttonHapus,
-                  color: "#fff",
-                  fontFamily: theme.fontFamily,
-                }}
-                onClick={resetForm}
-              >
-                Batal
-              </button>
-            )}
+            </form>
           </div>
-        </form>
-      </div>
+        </div>
+      ) : (
+        <div className="rounded-lg shadow p-6 mb-6 border flex justify-end" style={{ background: theme.cardColor }}>
+          <button
+            type="button"
+            onClick={handleShowForm}
+            className="px-4 py-2 rounded font-semibold"
+            style={{ background: theme.buttonSimpan, color: "#fff", fontFamily: theme.fontFamily }}
+          >
+            Tampilkan Form
+          </button>
+        </div>
+      )}
 
       {/* Search and Table */}
       <div className="rounded-lg shadow p-6" style={{ background: theme.cardColor }}>
@@ -836,7 +924,7 @@ export default function MasterPemasok() {
                           onClick={() => handleEdit(pemasok)}
                           className="px-3 py-1 rounded text-xs font-semibold"
                           style={{
-                            background: theme.buttonEdit,
+                            background: theme.buttonUpdate,
                             color: "#fff",
                             fontFamily: theme.fontFamily,
                           }}
@@ -844,7 +932,7 @@ export default function MasterPemasok() {
                           Edit
                         </button>
                         <button
-                          onClick={() => handleDelete(pemasok.id)}
+                          onClick={() => handleDelete(pemasok.ID)} // <-- GANTI id jadi ID
                           className="px-3 py-1 rounded text-xs font-semibold"
                           style={{
                             background: theme.buttonHapus,

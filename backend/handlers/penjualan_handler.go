@@ -12,239 +12,167 @@ import (
 )
 
 type PenjualanHandler struct {
-	db *gorm.DB
+	DB *gorm.DB
 }
 
 func NewPenjualanHandler(db *gorm.DB) *PenjualanHandler {
-	return &PenjualanHandler{db: db}
+	return &PenjualanHandler{DB: db}
 }
 
-// GetAllPenjualan retrieves all penjualan records
-func (h *PenjualanHandler) GetAllPenjualan(c *gin.Context) {
-	var penjualan []models.Penjualan
-
-	// Preload items untuk mendapatkan detail items
-	if err := h.db.Preload("Items").Find(&penjualan).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch penjualan data"})
+// Create Penjualan (header + detail)
+func (h *PenjualanHandler) CreatePenjualan(c *gin.Context) {
+	var req models.Penjualan
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
+	// Parse tanggal dari string
+	if req.TanggalStr != "" {
+		tgl, err := time.Parse("2006-01-02", req.TanggalStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Format tanggal salah"})
+			return
+		}
+		req.Tanggal = tgl
+	}
+	if req.DueDateStr != "" {
+		due, err := time.Parse("2006-01-02", req.DueDateStr)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Format due date salah"})
+			return
+		}
+		req.DueDate = due
+	}
+
+	// Hitung total dari detail
+	var subtotal, ppn float64
+	for i := range req.Details {
+		subtotal += req.Details[i].Qty * req.Details[i].Price
+		disc := (req.Details[i].Qty * req.Details[i].Price * req.Details[i].DiscPercent / 100) + req.Details[i].DiscAmountItem
+		afterDisc := (req.Details[i].Qty * req.Details[i].Price) - disc
+		ppn += afterDisc * req.Details[i].Tax / 100
+	}
+	req.Subtotal = subtotal
+	req.PPN = ppn
+	req.Total = subtotal + ppn + req.Freight + req.Stamp
+
+	// Simpan header + detail (relasi)
+	if err := h.DB.Create(&req).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal simpan penjualan", "details": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusCreated, req)
+}
+
+// Get All Penjualan (beserta detail)
+func (h *PenjualanHandler) GetAllPenjualan(c *gin.Context) {
+	var penjualan []models.Penjualan
+	if err := h.DB.Preload("Details").Find(&penjualan).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal ambil data"})
+		return
+	}
 	c.JSON(http.StatusOK, penjualan)
 }
 
-// GetPenjualanByID retrieves a single penjualan by ID
+// Get Penjualan by ID
 func (h *PenjualanHandler) GetPenjualanByID(c *gin.Context) {
 	id := c.Param("id")
 	var penjualan models.Penjualan
-
-	if err := h.db.Preload("Items").First(&penjualan, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Penjualan not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch penjualan"})
+	if err := h.DB.Preload("Details").First(&penjualan, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
 		return
 	}
-
 	c.JSON(http.StatusOK, penjualan)
 }
 
-// CreatePenjualan creates a new penjualan record
-func (h *PenjualanHandler) CreatePenjualan(c *gin.Context) {
-	var penjualan models.Penjualan
-
-	if err := c.ShouldBindJSON(&penjualan); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON data", "details": err.Error()})
-		return
-	}
-
-	// Validasi data required
-	if penjualan.NomorInvoice == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Nomor invoice is required"})
-		return
-	}
-
-	if penjualan.Customer == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Customer is required"})
-		return
-	}
-
-	// Parse tanggal jika diberikan sebagai string
-	if penjualan.Tanggal.IsZero() {
-		penjualan.Tanggal = time.Now()
-	}
-
-	// Calculate total dari items
-	var total float64
-	for _, item := range penjualan.Items {
-		total += item.Amount
-	}
-	penjualan.Total = total
-
-	// Mulai transaction
-	tx := h.db.Begin()
-
-	// Buat penjualan record
-	if err := tx.Create(&penjualan).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create penjualan", "details": err.Error()})
-		return
-	}
-
-	tx.Commit()
-
-	// Fetch data lengkap dengan items
-	h.db.Preload("Items").First(&penjualan, penjualan.ID)
-
-	c.JSON(http.StatusCreated, penjualan)
-}
-
-// UpdatePenjualan updates an existing penjualan record
+// Update Penjualan
 func (h *PenjualanHandler) UpdatePenjualan(c *gin.Context) {
 	id := c.Param("id")
+	var req models.Penjualan
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
 	var penjualan models.Penjualan
-
-	// Cek apakah penjualan exists
-	if err := h.db.Preload("Items").First(&penjualan, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Penjualan not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch penjualan"})
+	if err := h.DB.Preload("Details").First(&penjualan, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
 		return
 	}
 
-	var updateData models.Penjualan
-	if err := c.ShouldBindJSON(&updateData); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON data", "details": err.Error()})
-		return
+	// Update header
+	penjualan.NomorInvoice = req.NomorInvoice
+	penjualan.Tanggal = req.Tanggal
+	penjualan.DueDate = req.DueDate
+	penjualan.CustomerID = req.CustomerID
+	penjualan.GudangID = req.GudangID
+	penjualan.DepartementID = req.DepartementID
+	penjualan.NomorEfaktur = req.NomorEfaktur
+	penjualan.Notes = req.Notes
+	penjualan.Freight = req.Freight
+	penjualan.Stamp = req.Stamp
+	penjualan.Status = req.Status
+
+	// Hitung ulang total
+	var subtotal, ppn float64
+	for i := range req.Details {
+		subtotal += req.Details[i].Qty * req.Details[i].Price
+		disc := (req.Details[i].Qty * req.Details[i].Price * req.Details[i].DiscPercent / 100) + req.Details[i].DiscAmountItem
+		afterDisc := (req.Details[i].Qty * req.Details[i].Price) - disc
+		ppn += afterDisc * req.Details[i].Tax / 100
 	}
+	penjualan.Subtotal = subtotal
+	penjualan.PPN = ppn
+	penjualan.Total = subtotal + ppn + req.Freight + req.Stamp
 
-	// Mulai transaction
-	tx := h.db.Begin()
-
-	// Hapus items lama
-	if err := tx.Where("penjualan_id = ?", penjualan.ID).Delete(&models.PenjualanItem{}).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete old items"})
-		return
-	}
-
-	// Update penjualan data
-	penjualan.NomorInvoice = updateData.NomorInvoice
-	penjualan.Tanggal = updateData.Tanggal
-	penjualan.Customer = updateData.Customer
-	penjualan.Alamat = updateData.Alamat
-	penjualan.NoTelp = updateData.NoTelp
-	penjualan.TermPembayaran = updateData.TermPembayaran
-	penjualan.JatuhTempo = updateData.JatuhTempo
-	penjualan.Keterangan = updateData.Keterangan
-	penjualan.Status = updateData.Status
-
-	// Calculate total dari items baru
-	var total float64
-	for i := range updateData.Items {
-		updateData.Items[i].PenjualanID = penjualan.ID
-		total += updateData.Items[i].Amount
-	}
-	penjualan.Total = total
-
-	// Update penjualan
+	// Transaction: update header, hapus detail lama, insert detail baru
+	tx := h.DB.Begin()
 	if err := tx.Save(&penjualan).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update penjualan"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal update header"})
 		return
 	}
-
-	// Create items baru
-	if len(updateData.Items) > 0 {
-		if err := tx.Create(&updateData.Items).Error; err != nil {
-			tx.Rollback()
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create new items"})
-			return
-		}
+	if err := tx.Where("penjualan_id = ?", penjualan.ID).Delete(&models.PenjualanDetail{}).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hapus detail lama"})
+		return
 	}
-
+	for i := range req.Details {
+		req.Details[i].PenjualanID = penjualan.ID
+	}
+	if err := tx.Create(&req.Details).Error; err != nil {
+		tx.Rollback()
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal simpan detail baru"})
+		return
+	}
 	tx.Commit()
-
-	// Fetch data lengkap dengan items
-	h.db.Preload("Items").First(&penjualan, penjualan.ID)
 
 	c.JSON(http.StatusOK, penjualan)
 }
 
-// DeletePenjualan soft deletes a penjualan record
+// Delete Penjualan
 func (h *PenjualanHandler) DeletePenjualan(c *gin.Context) {
 	id := c.Param("id")
 	var penjualan models.Penjualan
-
-	// Cek apakah penjualan exists
-	if err := h.db.First(&penjualan, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Penjualan not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch penjualan"})
+	if err := h.DB.First(&penjualan, id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Data tidak ditemukan"})
 		return
 	}
-
-	// Mulai transaction
-	tx := h.db.Begin()
-
-	// Soft delete items
-	if err := tx.Where("penjualan_id = ?", penjualan.ID).Delete(&models.PenjualanItem{}).Error; err != nil {
+	tx := h.DB.Begin()
+	if err := tx.Where("penjualan_id = ?", penjualan.ID).Delete(&models.PenjualanDetail{}).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete penjualan items"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hapus detail"})
 		return
 	}
-
-	// Soft delete penjualan
 	if err := tx.Delete(&penjualan).Error; err != nil {
 		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete penjualan"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hapus header"})
 		return
 	}
-
 	tx.Commit()
-
-	c.JSON(http.StatusOK, gin.H{"message": "Penjualan deleted successfully"})
-}
-
-// HardDeletePenjualan permanently deletes a penjualan record
-func (h *PenjualanHandler) HardDeletePenjualan(c *gin.Context) {
-	id := c.Param("id")
-	var penjualan models.Penjualan
-
-	// Cek apakah penjualan exists (termasuk yang soft deleted)
-	if err := h.db.Unscoped().First(&penjualan, id).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			c.JSON(http.StatusNotFound, gin.H{"error": "Penjualan not found"})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch penjualan"})
-		return
-	}
-
-	// Mulai transaction
-	tx := h.db.Begin()
-
-	// Hard delete items
-	if err := tx.Unscoped().Where("penjualan_id = ?", penjualan.ID).Delete(&models.PenjualanItem{}).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to permanently delete penjualan items"})
-		return
-	}
-
-	// Hard delete penjualan
-	if err := tx.Unscoped().Delete(&penjualan).Error; err != nil {
-		tx.Rollback()
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to permanently delete penjualan"})
-		return
-	}
-
-	tx.Commit()
-
-	c.JSON(http.StatusOK, gin.H{"message": "Penjualan permanently deleted successfully"})
+	c.JSON(http.StatusOK, gin.H{"message": "Penjualan berhasil dihapus"})
 }
 
 // GetPenjualanByNomor retrieves penjualan by nomor invoice
@@ -252,7 +180,7 @@ func (h *PenjualanHandler) GetPenjualanByNomor(c *gin.Context) {
 	nomor := c.Param("nomor")
 	var penjualan models.Penjualan
 
-	if err := h.db.Preload("Items").Where("nomor_invoice = ?", nomor).First(&penjualan).Error; err != nil {
+	if err := h.DB.Preload("Details").Where("nomor_invoice = ?", nomor).First(&penjualan).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Penjualan not found"})
 			return
@@ -277,7 +205,7 @@ func (h *PenjualanHandler) UpdatePenjualanStatus(c *gin.Context) {
 	}
 
 	var penjualan models.Penjualan
-	if err := h.db.First(&penjualan, id).Error; err != nil {
+	if err := h.DB.First(&penjualan, id).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
 			c.JSON(http.StatusNotFound, gin.H{"error": "Penjualan not found"})
 			return
@@ -287,13 +215,13 @@ func (h *PenjualanHandler) UpdatePenjualanStatus(c *gin.Context) {
 	}
 
 	// Update status
-	if err := h.db.Model(&penjualan).Update("status", statusData.Status).Error; err != nil {
+	if err := h.DB.Model(&penjualan).Update("status", statusData.Status).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update status"})
 		return
 	}
 
 	// Fetch updated data
-	h.db.Preload("Items").First(&penjualan, penjualan.ID)
+	h.DB.Preload("Details").First(&penjualan, penjualan.ID)
 
 	c.JSON(http.StatusOK, penjualan)
 }
@@ -304,7 +232,7 @@ func (h *PenjualanHandler) GetPenjualanReport(c *gin.Context) {
 	endDate := c.Query("end_date")
 	status := c.Query("status")
 
-	query := h.db.Preload("Items")
+	query := h.DB.Preload("Details")
 
 	if startDate != "" && endDate != "" {
 		query = query.Where("tanggal BETWEEN ? AND ?", startDate, endDate)
@@ -347,7 +275,7 @@ func (h *PenjualanHandler) GetNextInvoiceNumber(c *gin.Context) {
 	prefix := fmt.Sprintf("INV-%04d%02d%02d-", year, month, day)
 
 	var count int64
-	h.db.Model(&models.Penjualan{}).Where("nomor_invoice LIKE ?", prefix+"%").Count(&count)
+	h.DB.Model(&models.Penjualan{}).Where("nomor_invoice LIKE ?", prefix+"%").Count(&count)
 
 	nextNumber := fmt.Sprintf("%s%03d", prefix, count+1)
 

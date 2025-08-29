@@ -62,9 +62,11 @@ func main() {
 		&models.MasterKategori{},
 		&models.MasterBarangJasa{},
 		&models.Penjualan{},
-		&models.PenjualanItem{},
+		&models.PenjualanDetail{},
 		&models.MasterGudangGroup{},
 		&models.MasterDepartement{},
+		&models.MasterPembeli{},
+		&models.MasterPemasok{},
 	)
 
 	if err != nil {
@@ -183,17 +185,16 @@ func main() {
 		api.POST("/penjualan", penjualanHandler.CreatePenjualan)
 		api.PUT("/penjualan/:id", penjualanHandler.UpdatePenjualan)
 		api.DELETE("/penjualan/:id", penjualanHandler.DeletePenjualan)
-		api.DELETE("/penjualan/:id/hard", penjualanHandler.HardDeletePenjualan)
 		api.GET("/penjualan/nomor/:nomor", penjualanHandler.GetPenjualanByNomor)
 		api.PATCH("/penjualan/:id/status", penjualanHandler.UpdatePenjualanStatus)
 		api.GET("/penjualan/report", penjualanHandler.GetPenjualanReport)
 		api.GET("/penjualan/next-invoice-number", penjualanHandler.GetNextInvoiceNumber)
 
 		// Master Gudang Routes
-		r.POST("/master-gudang", handlers.CreateGudang(db))
-		r.GET("/master-gudang", handlers.GetGudangList(db))
-		r.PUT("/master-gudang/:id", handlers.UpdateGudang(db))
-		r.DELETE("/master-gudang/:id", handlers.DeleteGudang(db))
+		api.POST("/master-gudang", handlers.CreateGudang(db))
+		api.GET("/master-gudang", handlers.GetGudangList(db))
+		api.PUT("/master-gudang/:id", handlers.UpdateGudang(db))
+		api.DELETE("/master-gudang/:id", handlers.DeleteGudang(db))
 
 		// Master Gudang Group Routes
 		api.GET("/master-gudang-group", handlers.GetMasterGudangGroup(db))
@@ -207,6 +208,16 @@ func main() {
 		api.PUT("/master-departement/:id", handlers.UpdateMasterDepartement(db))
 		api.DELETE("/master-departement/:id", handlers.DeleteMasterDepartement(db))
 
+		// Master Pembeli Routes
+		api.GET("/master-pembeli", handlers.GetMasterPembeli(db))
+		api.POST("/master-pembeli", handlers.CreateMasterPembeli(db))
+		api.PUT("/master-pembeli/:id", handlers.UpdateMasterPembeli(db))
+		api.DELETE("/master-pembeli/:id", handlers.DeleteMasterPembeli(db))
+
+		api.GET("/pemasok", handlers.GetMasterPemasok(db))
+		api.POST("/pemasok", handlers.CreateMasterPemasok(db))
+		api.PUT("/pemasok/:id", handlers.UpdateMasterPemasok(db))
+		api.DELETE("/pemasok/:id", handlers.DeleteMasterPemasok(db))
 	}
 
 	r.Run("0.0.0.0:8080")

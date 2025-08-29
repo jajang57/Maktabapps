@@ -1,28 +1,38 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { useTheme } from '../../context/ThemeContext';
+import api from "../../utils/api";
 
 export default function Penjualan() {
+  const { theme } = useTheme();
+
+  // Tambahkan state master
+  const [masterPembeli, setMasterPembeli] = useState([]);
+  const [masterGudang, setMasterGudang] = useState([]);
+  const [masterDepartement, setMasterDepartement] = useState([]);
+
   const [formData, setFormData] = useState({
     nomorInvoice: '',
     tanggal: new Date().toISOString().split('T')[0],
+    dueDate: '',
     customer: '',
-    alamat: '',
-    noTelp: '',
+    gudang: '',
     termPembayaran: '',
-    jatuhTempo: '',
-    keterangan: ''
+    departement: '',
+    nomorEfaktur: '',
+    notes: ''
   });
 
   const [items, setItems] = useState([
     {
       id: 1,
-      itemNo: '',
-      description: '',
+      kodeItem: '',
+      namaItem: '',
       qty: 0,
       unit: '',
-      unitPrice: 0,
+      price: 0,
       discPercent: 0,
       discAmountItem: 0,
       discAmount: 0,
@@ -32,11 +42,55 @@ export default function Penjualan() {
   ]);
 
   const [masterBarangJasa, setMasterBarangJasa] = useState([]);
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [listPenjualan, setListPenjualan] = useState([]);
+  const [loadingList, setLoadingList] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editId, setEditId] = useState(null);
 
   useEffect(() => {
     fetchMasterBarangJasa();
+    fetchMasterPembeli();
+    fetchMasterGudang();
+    fetchMasterDepartement();
     generateNomorInvoice();
+    fetchListPenjualan();
   }, []);
+useEffect(() => {
+  console.log('Isi masterPembeli:', masterPembeli);
+}, [masterPembeli]);
+  // Fetch master pembeli
+  const fetchMasterPembeli = async () => {
+    try {
+      const response = await api.get('/master-pembeli');
+      setMasterPembeli(response.data);
+    } catch (error) { }
+  };
+  // Fetch master gudang
+  const fetchMasterGudang = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/master-gudang', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMasterGudang(data);
+      }
+    } catch (error) { }
+  };
+  // Fetch master departement
+  const fetchMasterDepartement = async () => {
+    try {
+      const response = await fetch('http://localhost:8080/api/master-departement', {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMasterDepartement(data);
+      }
+    } catch (error) { }
+  };
 
   const fetchMasterBarangJasa = async () => {
     try {
@@ -71,7 +125,7 @@ export default function Penjualan() {
     const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: value
+      [name]: value // biarkan string
     }));
   };
 
@@ -79,14 +133,14 @@ export default function Penjualan() {
     const newItems = [...items];
     newItems[index][field] = value;
 
-    // Auto calculate when qty, unitPrice, or discount changes
-    if (['qty', 'unitPrice', 'discPercent'].includes(field)) {
+    // Auto calculate
+    if (['qty', 'price', 'discPercent', 'discAmountItem', 'tax'].includes(field)) {
       const item = newItems[index];
-      const subtotal = item.qty * item.unitPrice;
-      const discAmount = (subtotal * item.discPercent) / 100;
+      const subtotal = item.qty * item.price;
+      const discAmountItem = item.discAmountItem || 0;
+      const discAmount = (subtotal * item.discPercent) / 100 + discAmountItem;
       const afterDisc = subtotal - discAmount;
       const taxAmount = (afterDisc * item.tax) / 100;
-      
       newItems[index].discAmount = discAmount;
       newItems[index].amount = afterDisc + taxAmount;
     }
@@ -95,53 +149,77 @@ export default function Penjualan() {
   };
 
   const addNewItem = () => {
-    const newItem = {
+    setItems([...items, {
       id: items.length + 1,
-      itemNo: '',
-      description: '',
+      kodeItem: '',
+      namaItem: '',
       qty: 0,
       unit: '',
-      unitPrice: 0,
+      price: 0,
       discPercent: 0,
       discAmountItem: 0,
       discAmount: 0,
       tax: 0,
       amount: 0
-    };
-    setItems([...items, newItem]);
+    }]);
   };
 
   const removeItem = (index) => {
     if (items.length > 1) {
-      const newItems = items.filter((_, i) => i !== index);
-      setItems(newItems);
+      setItems(items.filter((_, i) => i !== index));
     }
   };
 
-  const calculateTotal = () => {
-    return items.reduce((total, item) => total + (item.amount || 0), 0);
-  };
+  const calculateSubtotal = () => items.reduce((total, item) => total + (item.qty * item.price), 0);
+  const calculatePPN = () =>
+  items.reduce((total, item) => {
+    const subtotal = item.qty * item.price;
+    const discAmountItem = item.discAmountItem || 0;
+    const discAmount = (subtotal * item.discPercent) / 100 + discAmountItem;
+    const afterDisc = subtotal - discAmount;
+    const taxAmount = (afterDisc * item.tax) / 100;
+    return total + taxAmount;
+  }, 0);
+  const calculateTotal = () => items.reduce((total, item) => total + (item.amount || 0), 0);
 
   const handleSave = async () => {
     try {
       const invoiceData = {
-        ...formData,
-        items: items,
-        total: calculateTotal(),
-        status: 'draft'
+        nomorInvoice: formData.nomorInvoice,
+        tanggal: formData.tanggal, // atau tanggalStr jika backend pakai string
+        dueDate: formData.dueDate, // atau dueDateStr
+        customerId: formData.customer ? Number(formData.customer) : null,
+        gudangId: Number(formData.gudang),
+        departementId: Number(formData.departement),
+        nomorEfaktur: formData.nomorEfaktur,
+        notes: formData.notes,
+        subtotal: calculateSubtotal(),
+        ppn: calculatePPN(),
+        freight: parseFloat(formData.freight) || 0,
+        stamp: parseFloat(formData.stamp) || 0,
+        total: calculateTotal() + (parseFloat(formData.freight) || 0) + (parseFloat(formData.stamp) || 0),
+        status: 'draft',
+        details: items.map(item => ({
+          kodeItem: item.kodeItem,
+          namaItem: item.namaItem,
+          qty: item.qty,
+          unit: item.unit,
+          price: item.price,
+          discPercent: item.discPercent,
+          discAmountItem: item.discAmountItem,
+          discAmount: item.discAmount,
+          tax: item.tax,
+          amount: item.amount
+        }))
       };
 
-      const response = await fetch('http://localhost:8080/api/penjualan', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(invoiceData)
-      });
+      const url = editMode ? `/penjualan/${editId}` : '/penjualan';
+      const method = editMode ? 'put' : 'post';
+      const response = await api[method](url, invoiceData);
 
-      if (response.ok) {
-        alert('Invoice penjualan berhasil disimpan!');
+      if (response.status === 200 || response.status === 201) {
+        setEditMode(false);
+        setEditId(null);
         // Reset form
         setFormData({
           nomorInvoice: '',
@@ -155,6 +233,7 @@ export default function Penjualan() {
         });
         setItems([{
           id: 1,
+          packingNo: '',
           itemNo: '',
           description: '',
           qty: 0,
@@ -164,9 +243,12 @@ export default function Penjualan() {
           discAmountItem: 0,
           discAmount: 0,
           tax: 0,
-          amount: 0
+          amount: 0,
+          serialBatchNumber: '',
+          notes: ''
         }]);
         generateNomorInvoice();
+        fetchListPenjualan();
       }
     } catch (error) {
       console.error('Error saving invoice:', error);
@@ -175,7 +257,7 @@ export default function Penjualan() {
   };
 
   const handleDelete = () => {
-    if (confirm('Apakah Anda yakin ingin menghapus semua data?')) {
+    if (confirm('Apakah Anda yakin ingin mengosongkan semua data?')) {
       setFormData({
         nomorInvoice: '',
         tanggal: new Date().toISOString().split('T')[0],
@@ -188,6 +270,7 @@ export default function Penjualan() {
       });
       setItems([{
         id: 1,
+        packingNo: '',
         itemNo: '',
         description: '',
         qty: 0,
@@ -197,271 +280,414 @@ export default function Penjualan() {
         discAmountItem: 0,
         discAmount: 0,
         tax: 0,
-        amount: 0
+        amount: 0,
+        serialBatchNumber: '',
+        notes: ''
       }]);
       generateNomorInvoice();
     }
   };
 
+  // Fetch list transaksi penjualan
+  const fetchListPenjualan = async () => {
+    setLoadingList(true);
+    try {
+      const response = await api.get('/penjualan');
+      setListPenjualan(response.data);
+    } catch (error) {
+      setListPenjualan([]);
+    }
+    setLoadingList(false);
+  };
+
+  // Filter transaksi berdasarkan search
+  const filteredPenjualan = listPenjualan.filter(trx =>
+    trx.nomorInvoice?.toLowerCase().includes(search.toLowerCase()) ||
+    trx.customerNama?.toLowerCase().includes(search.toLowerCase()) ||
+    String(trx.total).includes(search)
+  );
+
+  // Fungsi untuk handle edit
+  const handleEdit = (trx) => {
+    setShowForm(true);
+    setEditMode(true);
+    setEditId(trx.id);
+    setFormData({
+      nomorInvoice: trx.nomorInvoice,
+      tanggal: trx.tanggal?.split('T')[0] || '',
+      dueDate: trx.dueDate?.split('T')[0] || '',
+      customer: String(trx.customerId),
+      gudang: String(trx.gudangId),
+      departement: String(trx.departementId),
+      nomorEfaktur: trx.nomorEfaktur || '',
+      notes: trx.notes || '',
+      freight: trx.freight || 0,
+      stamp: trx.stamp || 0,
+      // tambahkan field lain jika ada
+    });
+    setItems(trx.details?.map((item, idx) => ({
+      id: idx + 1,
+      kodeItem: item.kodeItem,
+      namaItem: item.namaItem,
+      qty: item.qty,
+      unit: item.unit,
+      price: item.price,
+      discPercent: item.discPercent,
+      discAmountItem: item.discAmountItem,
+      discAmount: item.discAmount,
+      tax: item.tax,
+      amount: item.amount
+    })) || []);
+  };
+
+  // Fungsi hapus transaksi penjualan
+  const handleDeleteTransaksi = async (id) => {
+    if (window.confirm('Yakin ingin menghapus transaksi ini?')) {
+      try {
+        const response = await api.delete(`/penjualan/${id}`);
+        if (response.status === 200) {
+          alert('Transaksi berhasil dihapus!');
+          fetchListPenjualan();
+        } else {
+          alert('Gagal menghapus transaksi!');
+        }
+      } catch (error) {
+        alert('Gagal menghapus transaksi!');
+      }
+    }
+  };
+
   return (
-    <div className="p-6">
+    <div className="p-6 min-h-screen" style={{ background: theme.backgroundColor, color: theme.fontColor, fontFamily: theme.fontFamily }}>
       <h1 className="text-2xl font-bold mb-6">Penjualan - AR Invoice</h1>
       
-      <Card className="p-6">
-        {/* Header Invoice */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">Nomor Invoice</label>
-              <Input
-                name="nomorInvoice"
-                value={formData.nomorInvoice}
-                onChange={handleInputChange}
-                placeholder="Nomor Invoice"
-                readOnly
-                className="bg-gray-50"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Tanggal</label>
-              <Input
-                type="date"
-                name="tanggal"
-                value={formData.tanggal}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Customer</label>
-              <Input
+      {/* Card Form Input */}
+      <Card className="p-8 rounded-xl shadow-lg mb-8" style={{ background: theme.cardColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.cardBorderColor }}>
+        {/* Header & Tombol Tampilkan Form */}
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold">Form Input</h2>
+          <Button
+            onClick={() => setShowForm(!showForm)}
+            style={{
+              background: showForm ? theme.buttonHapus : theme.buttonSimpan,
+              color: "#fff",
+              fontWeight: "bold",
+              borderRadius: 8,
+              padding: "8px 20px"
+            }}
+          >
+            {showForm ? "Sembunyikan Form" : "Tampilkan Form"}
+          </Button>
+        </div>   
+
+        {/* Form Penjualan */}
+        {showForm && (
+          <div>
+            {/* Form Input Atas */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+              <div>
+                <label className="block font-semibold mb-1 text-gray-700">Customer</label>
+               <select
                 name="customer"
                 value={formData.customer}
                 onChange={handleInputChange}
-                placeholder="Nama Customer"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Alamat</label>
-              <Input
-                name="alamat"
-                value={formData.alamat}
-                onChange={handleInputChange}
-                placeholder="Alamat Customer"
-              />
-            </div>
-          </div>
-          
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium mb-2">No. Telepon</label>
-              <Input
-                name="noTelp"
-                value={formData.noTelp}
-                onChange={handleInputChange}
-                placeholder="Nomor Telepon"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Term Pembayaran</label>
-              <select
-                name="termPembayaran"
-                value={formData.termPembayaran}
-                onChange={handleInputChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border rounded"
+                style={{ ...inputStyle(theme) }}
               >
-                <option value="">Pilih Term</option>
-                <option value="Cash">Cash</option>
-                <option value="Net 30">Net 30</option>
-                <option value="Net 60">Net 60</option>
-                <option value="Net 90">Net 90</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Jatuh Tempo</label>
-              <Input
-                type="date"
-                name="jatuhTempo"
-                value={formData.jatuhTempo}
-                onChange={handleInputChange}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-2">Keterangan</label>
-              <Input
-                name="keterangan"
-                value={formData.keterangan}
-                onChange={handleInputChange}
-                placeholder="Keterangan"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Table Items */}
-        <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="text-lg font-semibold">Detail Barang/Jasa</h3>
-            <Button onClick={addNewItem} className="bg-green-600 hover:bg-green-700">
-              + Tambah Item
-            </Button>
-          </div>
-          
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse border border-gray-300">
-              <thead>
-                <tr className="bg-blue-100">
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Item No.</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Description</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Qty</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Unit</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Unit Price</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Disc %</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Disc Amount Item</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Disc Amount</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Tax</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Amount</th>
-                  <th className="border border-gray-300 px-2 py-2 text-sm">Action</th>
-                </tr>
-              </thead>
-              <tbody>
-                {items.map((item, index) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="border border-gray-300 px-1 py-1">
-                      <select
-                        value={item.itemNo}
-                        onChange={(e) => {
-                          const selectedItem = masterBarangJasa.find(m => m.kode === e.target.value);
-                          if (selectedItem) {
-                            handleItemChange(index, 'itemNo', e.target.value);
-                            handleItemChange(index, 'description', selectedItem.nama);
-                            handleItemChange(index, 'unit', selectedItem.satuan);
-                            handleItemChange(index, 'unitPrice', selectedItem.hargaJual);
-                          }
-                        }}
-                        className="w-full px-1 py-1 text-xs border-0 focus:ring-0"
-                      >
-                        <option value="">Pilih Item</option>
-                        {masterBarangJasa.map(item => (
-                          <option key={item.id} value={item.kode}>
-                            {item.kode}
-                          </option>
-                        ))}
-                      </select>
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <input
-                        type="text"
-                        value={item.description}
-                        onChange={(e) => handleItemChange(index, 'description', e.target.value)}
-                        className="w-full px-1 py-1 text-xs border-0 focus:ring-0"
-                        placeholder="Deskripsi"
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <input
-                        type="number"
-                        value={item.qty}
-                        onChange={(e) => handleItemChange(index, 'qty', parseFloat(e.target.value) || 0)}
-                        className="w-full px-1 py-1 text-xs border-0 focus:ring-0"
-                        min="0"
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <input
-                        type="text"
-                        value={item.unit}
-                        onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
-                        className="w-full px-1 py-1 text-xs border-0 focus:ring-0"
-                        placeholder="Unit"
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <input
-                        type="number"
-                        value={item.unitPrice}
-                        onChange={(e) => handleItemChange(index, 'unitPrice', parseFloat(e.target.value) || 0)}
-                        className="w-full px-1 py-1 text-xs border-0 focus:ring-0"
-                        min="0"
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <input
-                        type="number"
-                        value={item.discPercent}
-                        onChange={(e) => handleItemChange(index, 'discPercent', parseFloat(e.target.value) || 0)}
-                        className="w-full px-1 py-1 text-xs border-0 focus:ring-0"
-                        min="0"
-                        max="100"
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <input
-                        type="number"
-                        value={item.discAmountItem}
-                        onChange={(e) => handleItemChange(index, 'discAmountItem', parseFloat(e.target.value) || 0)}
-                        className="w-full px-1 py-1 text-xs border-0 focus:ring-0"
-                        min="0"
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <span className="text-xs">{item.discAmount.toLocaleString('id-ID')}</span>
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <input
-                        type="number"
-                        value={item.tax}
-                        onChange={(e) => handleItemChange(index, 'tax', parseFloat(e.target.value) || 0)}
-                        className="w-full px-1 py-1 text-xs border-0 focus:ring-0"
-                        min="0"
-                        max="100"
-                      />
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <span className="text-xs font-semibold">{item.amount.toLocaleString('id-ID')}</span>
-                    </td>
-                    <td className="border border-gray-300 px-1 py-1">
-                      <Button
-                        onClick={() => removeItem(index)}
-                        className="bg-red-500 hover:bg-red-600 text-white px-2 py-1 text-xs"
-                        disabled={items.length === 1}
-                      >
-                        Hapus
-                      </Button>
-                    </td>
-                  </tr>
+                <option value="">Pilih Customer</option>
+                {masterPembeli.map(p => (
+                  <option key={p.id} value={String(p.ID)}>{p.nama}</option>
                 ))}
-              </tbody>
-              <tfoot>
-                <tr className="bg-blue-50 font-semibold">
-                  <td colSpan="9" className="border border-gray-300 px-2 py-2 text-right">
-                    Total:
-                  </td>
-                  <td className="border border-gray-300 px-2 py-2">
-                    Rp {calculateTotal().toLocaleString('id-ID')}
-                  </td>
-                  <td className="border border-gray-300"></td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        </div>
+              </select>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-gray-700">Invoice No.</label>
+                <Input name="nomorInvoice" value={formData.nomorInvoice} readOnly style={{ ...inputStyle(theme) }} />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-gray-700">Tanggal</label>
+                <Input type="date" name="tanggal" value={formData.tanggal} onChange={handleInputChange} style={{ ...inputStyle(theme) }} />
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-gray-700">Due Date</label>
+                <Input type="date" name="dueDate" value={formData.dueDate} onChange={handleInputChange} style={{ ...inputStyle(theme) }} />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div>
+                <label className="block font-semibold mb-1 text-gray-700">Gudang</label>
+                <select
+                  name="gudang"
+                  value={formData.gudang}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded"
+                  style={{ ...inputStyle(theme) }}
+                >
+                  <option value="">Pilih Gudang</option>
+                  {masterGudang.map(g => (
+                    <option key={g.id} value={g.id}>{g.nama}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block font-semibold mb-1 text-gray-700">Departement</label>
+                <select
+                  name="departement"
+                  value={formData.departement}
+                  onChange={handleInputChange}
+                  className="w-full px-3 py-2 border rounded"
+                  style={{ ...inputStyle(theme) }}
+                >
+                  <option value="">Pilih Departement</option>
+                  {masterDepartement.map(d => (
+                    <option key={d.id} value={d.id}>{d.nama}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
 
-        {/* Action Buttons */}
-        <div className="flex justify-end space-x-4">
-          <Button
-            onClick={handleDelete}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-2"
-          >
-            Hapus
+            {/* Table Items */}
+            <div className="mb-8">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                  Detail Barang/Jasa
+                </h3>
+                <Button onClick={addNewItem} style={{ background: theme.buttonSimpan, color: "#fff", fontFamily: theme.fontFamily, border: `2px solid ${theme.buttonSimpan}` }}>
+                  + Tambah Item
+                </Button>
+              </div>
+              <div className="overflow-x-auto rounded-lg border" style={{ borderColor: theme.cardBorderColor }}>
+                <table className="w-full border-collapse" style={{ fontFamily: theme.tableFontFamily }}>
+                  <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
+                    <tr>
+                      <th className="px-3 py-2">Kode Item</th>
+                      <th className="px-3 py-2">Nama Item</th>
+                      <th className="px-3 py-2">Qty</th>
+                      <th className="px-3 py-2">Item Unit</th>
+                      <th className="px-3 py-2">Price</th>
+                      <th className="px-3 py-2">Discount %</th>
+                      <th className="px-3 py-2">Discount Amount Item</th>
+                      <th className="px-3 py-2">Discount Amount</th>
+                      <th className="px-3 py-2">Tax</th>
+                      <th className="px-3 py-2">Amount</th>
+                      <th className="px-3 py-2">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {items.map((item, index) => (
+                      <tr key={item.id} style={{ background: index % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor, color: theme.tableFontColor }}>
+                        <td className="px-2 py-1">
+                          <select value={item.kodeItem} onChange={e => {
+                            const selected = masterBarangJasa.find(m => m.kode === e.target.value);
+                            handleItemChange(index, 'kodeItem', e.target.value);
+                            handleItemChange(index, 'namaItem', selected ? selected.nama : '');
+                            handleItemChange(index, 'unit', selected ? selected.satuan : '');
+                            handleItemChange(index, 'price', selected ? selected.hargaJual : 0);
+                          }} className="w-full px-1 py-1 text-xs border border-gray-200 rounded">
+                            <option value="">Pilih Kode</option>
+                            {masterBarangJasa.map(item => (
+                              <option key={item.id} value={item.kode}>{item.kode}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-2 py-1">
+                          <input type="text" value={item.namaItem} onChange={e => handleItemChange(index, 'namaItem', e.target.value)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded" />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input type="number" value={item.qty} onChange={e => handleItemChange(index, 'qty', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded" />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input type="number" value={item.price} onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input type="number" value={item.discPercent} onChange={e => handleItemChange(index, 'discPercent', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" max="100" />
+                        </td>
+                        <td className="px-2 py-1">
+                          <input type="number" value={item.discAmountItem} onChange={e => handleItemChange(index, 'discAmountItem', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" />
+                        </td>
+                        <td className="px-2 py-1 text-right">
+                          <span className="text-xs">{item.discAmount.toLocaleString('id-ID')}</span>
+                        </td>
+                        <td className="px-2 py-1">
+                          <input type="number" value={item.tax} onChange={e => handleItemChange(index, 'tax', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" max="100" />
+                        </td>
+                        <td className="px-2 py-1 text-right">
+                          <span className="text-xs font-semibold">{item.amount.toLocaleString('id-ID')}</span>
+                        </td>
+                        <td className="px-2 py-1">
+                          <Button onClick={() => removeItem(index)} style={{ background: theme.buttonHapus, color: "#fff", fontFamily: theme.fontFamily, fontSize: 12, border: `2px solid ${theme.buttonHapus}` }} disabled={items.length === 1}>
+                            Hapus
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ background: theme.tableFooterColor, color: theme.tableFontColor }}>
+                      <td colSpan="9" className="border px-2 py-2 text-right" style={{ borderColor: theme.cardBorderColor }}>
+                        Total:
+                      </td>
+                      <td className="border px-2 py-2 text-right" style={{ borderColor: theme.cardBorderColor }}>
+                        Rp {calculateTotal().toLocaleString('id-ID')}
+                      </td>
+                      <td className="border"></td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </div>
+
+            {/* Bagian Bawah */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">
+              {/* Kiri: Nomor eFaktur & Notes */}
+              <div className="space-y-4">
+                <div>
+                  <label className="block font-semibold mb-1 text-gray-700">Nomor eFaktur</label>
+                  <Input name="nomorEfaktur" value={formData.nomorEfaktur} onChange={handleInputChange} style={{ ...inputStyle(theme) }} />
+                </div>
+                <div>
+                  <label className="block font-semibold mb-1 text-gray-700">Notes</label>
+                  <textarea
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                      borderColor: theme.dropdownColor,
+                    }}
+                  />
+                </div>
+              </div>
+              {/* Kanan: Summary */}
+              <div>
+                <div className="rounded-lg p-6 mb-4" style={{ background: theme.cardColor, color: theme.fontColor, fontFamily: theme.fontFamily, border: `1px solid ${theme.cardBorderColor}`, boxShadow: "0 2px 8px rgba(0,0,0,0.04)" }}>
+                  <div className="flex justify-between items-center mb-2">
+                    <span>Sub Total:</span>
+                    <span className="font-semibold">Rp {calculateSubtotal().toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span>PPN:</span>
+                    <span className="font-semibold">Rp {calculatePPN().toLocaleString('id-ID')}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span>Freight:</span>
+                    <Input type="number" name="freight" value={formData.freight || 0} onChange={handleInputChange} style={{ ...inputStyle(theme), width: 80, textAlign: "right" }} />
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span>Stamp:</span>
+                    <Input type="number" name="stamp" value={formData.stamp || 0} onChange={handleInputChange} style={{ ...inputStyle(theme), width: 80, textAlign: "right" }} />
+                  </div>
+                  <div className="flex justify-between items-center font-bold text-lg mt-4">
+                    <span>Total Invoice:</span>
+                    <span>
+                      Rp {(
+                        calculateTotal()
+                        + (parseFloat(formData.freight) || 0)
+                        + (parseFloat(formData.stamp) || 0)
+                      ).toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <Button onClick={handleSave} style={{ background: theme.buttonSimpan, color: "#fff", fontFamily: theme.fontFamily, border: `2px solid ${theme.buttonSimpan}`, width: "100%", fontSize: 16, padding: "12px 0" }}>
+                    {editMode ? "Update" : "Simpan"}
+                  </Button>
+                  <Button
+  onClick={handleDelete}
+  style={{
+    background: theme.buttonKosongkan || "#6366f1",
+    color: "#fff",
+    fontFamily: theme.fontFamily,
+    border: `2px solid ${theme.buttonKosongkan || "#6366f1"}`,
+    width: "100%",
+    fontSize: 16,
+    padding: "12px 0"
+  }}
+>
+  Kosongkan
+</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </Card>
+
+      {/* Card List Transaksi Penjualan */}
+      <Card className="p-8 rounded-xl shadow-lg" style={{ background: theme.cardColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.cardBorderColor }}>
+        <h2 className="text-lg font-bold mb-4">Daftar Transaksi Penjualan</h2>
+        <div className="flex gap-2 mb-2">
+          <Input
+            placeholder="Cari invoice/customer/total"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            style={{ width: 260, background: "#f7f7fa" }}
+          />
+          <Button style={{ background: "#4ade80", color: "#fff", fontWeight: "bold", borderRadius: 8 }}>
+            Print
           </Button>
-          <Button
-            onClick={handleSave}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2"
-          >
-            Simpan
-          </Button>
+        </div>
+        <div className="overflow-x-auto rounded-lg border mb-4" style={{ borderColor: theme.cardBorderColor }}>
+          <table className="w-full border-collapse">
+            <thead style={{ background: "#e0e7ff", color: "#222", fontWeight: "bold" }}>
+              <tr>
+                <th className="px-3 py-2">Invoice No.</th>
+                <th className="px-3 py-2">Tanggal</th>
+                <th className="px-3 py-2 w-48 text-left">Customer</th>
+                <th className="px-3 py-2">Total</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPenjualan.map(trx => (
+                <tr key={trx.id} style={{ background: "#fff" }}>
+                  <td className="px-2 py-1">{trx.nomorInvoice}</td>
+                  <td className="px-2 py-1">{trx.tanggal ? new Date(trx.tanggal).toLocaleDateString('id-ID') : ''}</td>
+                  <td className="px-2 py-1">
+                    {masterPembeli.find(p => String(p.ID) === String(trx.customerId))?.nama || '-'}
+                  </td>
+                  <td className="px-2 py-1 text-right">Rp {trx.total?.toLocaleString('id-ID')}</td>
+                  <td className="px-2 py-1">
+                    <span className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-semibold">{trx.status}</span>
+                  </td>
+                  <td className="px-2 py-1 flex gap-2">
+                    <Button
+                      style={{ background: "#fbbf24", color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
+                      onClick={() => handleEdit(trx)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      style={{ background: "#ef4444", color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
+                      onClick={() => handleDeleteTransaksi(trx.id)}
+                    >
+                      Hapus
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </Card>
     </div>
   );
+}
+
+// Helper style function
+function inputStyle(theme) {
+  return {
+    background: theme.fieldColor,
+    color: theme.fontColor,
+    fontFamily: theme.fontFamily,
+    borderColor: theme.dropdownColor,
+  };
 }
