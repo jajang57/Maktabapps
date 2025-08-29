@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import Select from "react-select";
 import api from "../../utils/api";
 import { useTheme } from "../../context/ThemeContext";
 
@@ -102,6 +103,46 @@ export default function MasterBarangJasa() {
 
   const [coaList, setCoaList] = useState([]);
 
+  // Helper: sort COA by kode
+  const sortedCoaList = [...coaList].sort((a, b) => a.kode.localeCompare(b.kode));
+  // react-select options
+  const coaOptions = sortedCoaList.map(coa => ({ value: coa.kode, label: `${coa.kode} - ${coa.nama}` }));
+
+  // Helper: get required GL fields based on diJual/diBeli
+  const getGLFields = () => {
+    const jual = form.diJual;
+    const beli = form.diBeli;
+    const jenis = form.jenis;
+    if (jual && beli) {
+      return {
+        show: ["persediaan", "penjualan", "returPenjualan", "diskonPenjualan", "hpp", "returPembelian", "diskonKhusus", "pembelian"],
+        required: ["persediaan", "penjualan", "returPenjualan", "diskonPenjualan", "hpp", "returPembelian", "diskonKhusus", "pembelian"]
+      };
+    } else if (jenis === 'JASA') {
+      return {
+        show: ["penjualan", "returPenjualan", "diskonPenjualan", "hpp", "diskonKhusus"],
+        required: ["penjualan", "returPenjualan", "diskonPenjualan", "hpp", "diskonKhusus"]
+      };
+    } else if (jual) {
+      return {
+        show: ["persediaan", "penjualan", "returPenjualan", "diskonPenjualan", "hpp", "diskonKhusus"],
+        required: ["persediaan", "penjualan", "returPenjualan", "diskonPenjualan", "hpp", "diskonKhusus"]
+      };
+    }  
+    
+    else if (beli) {
+      return {
+        show: ["persediaan", "hpp", "pembelian"],
+        required: ["persediaan", "hpp", "pembelian"]
+      };
+    } else {
+      return {
+        show: ["persediaan", "hpp", "diskonKhusus"],
+        required: ["persediaan", "hpp", "diskonKhusus"]
+      };
+    }
+  };
+
   // Fungsi untuk format angka dengan 2 desimal
   const formatNumber = (value) => {
     if (!value || value === '') return '';
@@ -166,24 +207,60 @@ export default function MasterBarangJasa() {
   // Submit data
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!form.kode || !form.nama || !form.jenis) {
+
+    // Generate kode otomatis jika field kode kosong
+    let kodeBarangJasa = form.kode.trim();
+    if (!kodeBarangJasa) {
+      kodeBarangJasa = generateKode();
+    }
+    if (!kodeBarangJasa || !form.nama || !form.jenis) {
       setError("Kode, Nama, dan Jenis wajib diisi!");
       return;
     }
 
+
+    // Validasi GL Account sesuai aturan
+    const { required } = getGLFields();
+    const glRequired = {
+      persediaan: glAccount.persediaan,
+      penjualan: glAccount.penjualan,
+      returPenjualan: glAccount.returPenjualan,
+      diskonPenjualan: glAccount.diskonPenjualan,
+      hpp: glAccount.hpp,
+      returPembelian: glAccount.returPembelian,
+      diskonKhusus: glAccount.diskonKhusus,
+      pembelian: glAccount.pembelian,
+    };
+    for (const key of required) {
+      if (!glRequired[key]) {
+        setError(`Field Akun ${key.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())} wajib diisi!`);
+        return;
+      }
+    }
+
+    // Kosongkan field akun yang tidak relevan
+    const { show } = getGLFields();
+    const allGLKeys = [
+      "persediaan", "penjualan", "returPenjualan", "diskonPenjualan", "hpp", "returPembelian", "diskonKhusus", "pembelian"
+    ];
+    const glClean = {};
+    for (const key of allGLKeys) {
+      glClean[key] = show.includes(key) ? glAccount[key] : "";
+    }
     const payload = {
-      ...form,
+  ...form,
+  kode: kodeBarangJasa,
       hargaBeli: form.hargaBeli ? parseFloat(unformatNumber(form.hargaBeli)) : 0,
       hargaJual: form.hargaJual ? parseFloat(unformatNumber(form.hargaJual)) : 0,
       stokMinimal: form.stokMinimal ? parseInt(form.stokMinimal) : 0,
-      // Tambahkan field Akun GL
-      akunPersediaan: glAccount.persediaan,
-      akunPenjualan: glAccount.penjualan,
-      akunReturPenjualan: glAccount.returPenjualan,
-      akunDiskonPenjualan: glAccount.diskonPenjualan,
-      akunHPP: glAccount.hpp,
-      akunReturPembelian: glAccount.returPembelian,
-      akunDiskonKhusus: glAccount.diskonKhusus,
+      akunPersediaan: glClean.persediaan,
+      akunPenjualan: glClean.penjualan,
+      akunReturPenjualan: glClean.returPenjualan,
+      akunDiskonPenjualan: glClean.diskonPenjualan,
+      akunHPP: glClean.hpp,
+      akunReturPembelian: glClean.returPembelian,
+      akunDiskonKhusus: glClean.diskonKhusus,
+      akunPembelian: glClean.pembelian,
     };
 
     // Cek duplikat kode
@@ -623,34 +700,21 @@ export default function MasterBarangJasa() {
                          style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Kode
                   </label>
-                  <div className="flex gap-2">
+                  <div className="flex items-center gap-2">
                     <input
                       type="text"
                       name="kode"
                       value={form.kode}
                       onChange={handleChange}
-                      className="flex-1 border rounded-lg px-4 py-2 transition"
-                      placeholder="Contoh: BRG001"
-                      required
+                      className="w-full border rounded-lg px-4 py-2 transition"
+                      placeholder="Otomatis jika kosong"
                       style={{
                         background: theme.fieldColor,
                         color: theme.fontColor,
                         fontFamily: theme.fontFamily,
                       }}
                     />
-                    <button
-                      type="button"
-                      onClick={() => setForm(prev => ({ ...prev, kode: generateKode() }))}
-                      className="px-3 py-2 rounded-lg transition text-sm"
-                      style={{
-                        background: theme.buttonUpdate,
-                        color: "#fff",
-                        fontFamily: theme.fontFamily,
-                      }}
-                      title="Generate kode otomatis"
-                    >
-                      Auto
-                    </button>
+                    <span className="text-xs text-gray-400">*Kosongkan untuk kode otomatis</span>
                   </div>
                 </div>
 
@@ -958,139 +1022,47 @@ export default function MasterBarangJasa() {
 
             {activeTab === "AkunGL" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Akun Persediaan
-                  </label>
-                  <select
-                    value={glAccount.persediaan}
-                    onChange={e => setGlAccount(prev => ({ ...prev, persediaan: e.target.value }))}
-                    className="w-full border rounded-lg px-4 py-2"
-                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
-                    required
-                  >
-                    <option value="">Pilih Akun Persediaan</option>
-                    {coaList.map(coa => (
-                      <option key={coa.id} value={coa.kode}>
-                        {coa.kode} - {coa.nama}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Akun Penjualan
-                  </label>
-                  <select
-                    value={glAccount.penjualan}
-                    onChange={e => setGlAccount(prev => ({ ...prev, penjualan: e.target.value }))}
-                    className="w-full border rounded-lg px-4 py-2"
-                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
-                    required
-                  >
-                    <option value="">Pilih Akun Penjualan</option>
-                    {coaList.map(coa => (
-                      <option key={coa.id} value={coa.kode}>
-                        {coa.kode} - {coa.nama}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Akun Retur Penjualan
-                  </label>
-                  <select
-                    value={glAccount.returPenjualan}
-                    onChange={e => setGlAccount(prev => ({ ...prev, returPenjualan: e.target.value }))}
-                    className="w-full border rounded-lg px-4 py-2"
-                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
-                    required
-                  >
-                    <option value="">Pilih Akun Retur Penjualan</option>
-                    {coaList.map(coa => (
-                      <option key={coa.id} value={coa.kode}>
-                        {coa.kode} - {coa.nama}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Akun Diskon Penjualan
-                  </label>
-                  <select
-                    value={glAccount.diskonPenjualan}
-                    onChange={e => setGlAccount(prev => ({ ...prev, diskonPenjualan: e.target.value }))}
-                    className="w-full border rounded-lg px-4 py-2"
-                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
-                    required
-                  >
-                    <option value="">Pilih Akun Diskon Penjualan</option>
-                    {coaList.map(coa => (
-                      <option key={coa.id} value={coa.kode}>
-                        {coa.kode} - {coa.nama}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Akun HPP
-                  </label>
-                  <select
-                    value={glAccount.hpp}
-                    onChange={e => setGlAccount(prev => ({ ...prev, hpp: e.target.value }))}
-                    className="w-full border rounded-lg px-4 py-2"
-                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
-                    required
-                  >
-                    <option value="">Pilih Akun HPP</option>
-                    {coaList.map(coa => (
-                      <option key={coa.id} value={coa.kode}>
-                        {coa.kode} - {coa.nama}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Akun Retur Pembelian
-                  </label>
-                  <select
-                    value={glAccount.returPembelian}
-                    onChange={e => setGlAccount(prev => ({ ...prev, returPembelian: e.target.value }))}
-                    className="w-full border rounded-lg px-4 py-2"
-                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
-                    required
-                  >
-                    <option value="">Pilih Akun Retur Pembelian</option>
-                    {coaList.map(coa => (
-                      <option key={coa.id} value={coa.kode}>
-                        {coa.kode} - {coa.nama}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                    Akun Diskon Khusus
-                  </label>
-                  <select
-                    value={glAccount.diskonKhusus}
-                    onChange={e => setGlAccount(prev => ({ ...prev, diskonKhusus: e.target.value }))}
-                    className="w-full border rounded-lg px-4 py-2"
-                    style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
-                    required
-                  >
-                    <option value="">Pilih Akun Diskon Khusus</option>
-                    {coaList.map(coa => (
-                      <option key={coa.id} value={coa.kode}>
-                        {coa.kode} - {coa.nama}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {(() => {
+                  const { show, required } = getGLFields();
+                  const fields = [
+                    { key: "persediaan", label: "Akun Persediaan" },
+                    { key: "penjualan", label: "Akun Penjualan" },
+                    { key: "returPenjualan", label: "Akun Retur Penjualan" },
+                    { key: "diskonPenjualan", label: "Akun Diskon Penjualan" },
+                    { key: "hpp", label: "Akun HPP" },
+                    { key: "returPembelian", label: "Akun Retur Pembelian" },
+                    { key: "diskonKhusus", label: "Akun Diskon Khusus" },
+                    { key: "pembelian", label: "Akun Pembelian" },
+                  ];
+                  return fields.filter(f => show.includes(f.key)).map(f => (
+                    <div key={f.key}>
+                      <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                        {f.label}
+                      </label>
+                      <Select
+                        options={coaOptions}
+                        value={coaOptions.find(opt => opt.value === glAccount[f.key]) || null}
+                        onChange={opt => setGlAccount(prev => ({ ...prev, [f.key]: opt ? opt.value : "" }))}
+                        isClearable
+                        placeholder={`Pilih ${f.label}`}
+                        classNamePrefix="react-select"
+                        styles={{
+                          control: (base) => ({
+                            ...base,
+                            background: theme.fieldColor,
+                            color: theme.fontColor,
+                            fontFamily: theme.fontFamily,
+                          }),
+                          menu: (base) => ({
+                            ...base,
+                            zIndex: 20
+                          })
+                        }}
+                        required={required.includes(f.key)}
+                      />
+                    </div>
+                  ));
+                })()}
               </div>
             )}
 

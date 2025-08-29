@@ -9,7 +9,8 @@ export default function SideNavbar({ onClose }) {
   const { user, logout } = useAuth();
 
   // State untuk dropdown dan subDropdown
-  const [openDropdown, setOpenDropdown] = useState(null);
+  // Ubah ke array agar bisa buka banyak dropdown sekaligus
+  const [openDropdowns, setOpenDropdowns] = useState([]);
   const [openSubDropdown, setOpenSubDropdown] = useState(null);
 
   // Tambahkan icon SVG di setiap menu utama
@@ -80,9 +81,10 @@ export default function SideNavbar({ onClose }) {
         </svg>
       ),
       dropdown: [
-        { name: "Barang Dan Jasa", to: "/master-data/barang-jasa" },
-        { name: "Gudang", to: "/master-data/gudang" },
-        { name: "Penyesuaian Persediaan", to: "/master-data/penyesuaian-persediaan" },
+  { name: "Barang Dan Jasa", to: "/master-data/barang-jasa" },
+  { name: "Gudang", to: "/master-data/gudang" },
+  { name: "Mata Uang", to: "/master-data/mata-uang" },
+  { name: "Penyesuaian Persediaan", to: "/master-data/penyesuaian-persediaan" },
       ],
     },
     {
@@ -217,16 +219,20 @@ export default function SideNavbar({ onClose }) {
               <button
                 type="button"
                 className={`w-full flex items-center gap-2 font-bold justify-between px-3 py-2 rounded hover:bg-indigo-100 transition ${
-                  openDropdown === idx ? "bg-indigo-500 text-white" : ""
+                  openDropdowns.includes(idx) ? "bg-indigo-500 text-white" : ""
                 }`}
-                onClick={() => setOpenDropdown(openDropdown === idx ? null : idx)}
+                onClick={() => {
+                  setOpenDropdowns(openDropdowns.includes(idx)
+                    ? openDropdowns.filter(i => i !== idx)
+                    : [...openDropdowns, idx]);
+                }}
               >
                 <span className="flex items-center gap-2">
                   {item.icon}
                   {item.name}
                 </span>
                 <svg
-                  className={`w-4 h-4 ml-1 transition-transform ${openDropdown === idx ? "rotate-90" : ""}`}
+                  className={`w-4 h-4 ml-1 transition-transform ${openDropdowns.includes(idx) ? "rotate-90" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}
@@ -235,7 +241,7 @@ export default function SideNavbar({ onClose }) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-              {openDropdown === idx && (
+              {openDropdowns.includes(idx) && (
                 <div className="ml-6 mt-1 flex flex-col gap-1">
                   {item.dropdown.map((drop, dropIdx) =>
                     drop.subDropdown ? (

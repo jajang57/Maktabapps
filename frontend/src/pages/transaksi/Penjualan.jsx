@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { Fragment } from 'react';
 import { Card } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -25,21 +26,7 @@ export default function Penjualan() {
     notes: ''
   });
 
-  const [items, setItems] = useState([
-    {
-      id: 1,
-      kodeItem: '',
-      namaItem: '',
-      qty: 0,
-      unit: '',
-      price: 0,
-      discPercent: 0,
-      discAmountItem: 0,
-      discAmount: 0,
-      tax: 0,
-      amount: 0
-    }
-  ]);
+  const [items, setItems] = useState([]);
 
   const [masterBarangJasa, setMasterBarangJasa] = useState([]);
   const [search, setSearch] = useState('');
@@ -48,6 +35,9 @@ export default function Penjualan() {
   const [loadingList, setLoadingList] = useState(false);
   const [editMode, setEditMode] = useState(false);
   const [editId, setEditId] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedModalItems, setSelectedModalItems] = useState([]);
+  const [modalFilter, setModalFilter] = useState("");
 
   useEffect(() => {
     fetchMasterBarangJasa();
@@ -67,42 +57,28 @@ useEffect(() => {
       setMasterPembeli(response.data);
     } catch (error) { }
   };
+
   // Fetch master gudang
   const fetchMasterGudang = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/master-gudang', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMasterGudang(data);
-      }
-    } catch (error) { }
-  };
-  // Fetch master departement
-  const fetchMasterDepartement = async () => {
-    try {
-      const response = await fetch('http://localhost:8080/api/master-departement', {
-        headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMasterDepartement(data);
-      }
+      const response = await api.get('/master-gudang');
+      setMasterGudang(response.data);
     } catch (error) { }
   };
 
+  // Fetch master departement
+  const fetchMasterDepartement = async () => {
+    try {
+      const response = await api.get('/master-departement');
+      setMasterDepartement(response.data);
+    } catch (error) { }
+  };
+
+  // Fetch master barang/jasa
   const fetchMasterBarangJasa = async () => {
     try {
-      const response = await fetch('http://localhost:8080/api/master-barang-jasa', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      if (response.ok) {
-        const data = await response.json();
-        setMasterBarangJasa(data);
-      }
+      const response = await api.get('/master-barang-jasa');
+      setMasterBarangJasa(response.data);
     } catch (error) {
       console.error('Error fetching master barang jasa:', error);
     }
@@ -165,9 +141,7 @@ useEffect(() => {
   };
 
   const removeItem = (index) => {
-    if (items.length > 1) {
-      setItems(items.filter((_, i) => i !== index));
-    }
+    setItems(items.filter((_, i) => i !== index));
   };
 
   const calculateSubtotal = () => items.reduce((total, item) => total + (item.qty * item.price), 0);
@@ -209,7 +183,8 @@ useEffect(() => {
           discAmountItem: item.discAmountItem,
           discAmount: item.discAmount,
           tax: item.tax,
-          amount: item.amount
+          amount: item.amount,
+          gudang: item.gudang // pastikan gudang ikut ke detail
         }))
       };
 
@@ -217,7 +192,8 @@ useEffect(() => {
       const method = editMode ? 'put' : 'post';
       const response = await api[method](url, invoiceData);
 
-      if (response.status === 200 || response.status === 201) {
+      if (response.status === 200 || response.status === 201 || response.data?.success) {
+        alert(editMode ? 'Data berhasil diupdate!' : 'Data berhasil disimpan!');
         setEditMode(false);
         setEditId(null);
         // Reset form
@@ -229,24 +205,16 @@ useEffect(() => {
           noTelp: '',
           termPembayaran: '',
           jatuhTempo: '',
-          keterangan: ''
+          keterangan: '',
+          gudang: '',
+          departement: '',
+          dueDate: '',
+          nomorEfaktur: '',
+          notes: '',
+          freight: 0,
+          stamp: 0
         });
-        setItems([{
-          id: 1,
-          packingNo: '',
-          itemNo: '',
-          description: '',
-          qty: 0,
-          unit: '',
-          unitPrice: 0,
-          discPercent: 0,
-          discAmountItem: 0,
-          discAmount: 0,
-          tax: 0,
-          amount: 0,
-          serialBatchNumber: '',
-          notes: ''
-        }]);
+        setItems([]); // detail barang/jasa default kosong
         generateNomorInvoice();
         fetchListPenjualan();
       }
@@ -336,7 +304,8 @@ useEffect(() => {
       discAmountItem: item.discAmountItem,
       discAmount: item.discAmount,
       tax: item.tax,
-      amount: item.amount
+      amount: item.amount,
+      gudang: String(item.gudangId || item.gudang) // pastikan id gudang masuk, fallback ke item.gudang jika ada
     })) || []);
   };
 
@@ -514,73 +483,82 @@ useEffect(() => {
                 <h3 className="text-lg font-bold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Detail Barang/Jasa
                 </h3>
-                <Button onClick={addNewItem} style={{ background: theme.buttonSimpan, color: "#fff", fontFamily: theme.fontFamily, border: `2px solid ${theme.buttonSimpan}` }}>
+                <Button onClick={() => setShowModal(true)} style={{ background: theme.buttonSimpan, color: "#fff", fontFamily: theme.fontFamily, border: `2px solid ${theme.buttonSimpan}` }}>
                   + Tambah Item
                 </Button>
               </div>
-              <div className="overflow-x-auto rounded-lg border" style={{ borderColor: theme.cardBorderColor }}>
-                <table className="w-full border-collapse" style={{ fontFamily: theme.tableFontFamily }}>
+              <div className="overflow-x-auto max-w-full rounded-lg border min-w-max" style={{ borderColor: theme.cardBorderColor }}>
+                <table className="w-full border-collapse whitespace-nowrap text-sm" style={{ fontFamily: theme.tableFontFamily }}>
                   <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
                     <tr>
-                      <th className="px-3 py-2">Kode Item</th>
-                      <th className="px-3 py-2">Nama Item</th>
-                      <th className="px-3 py-2">Qty</th>
-                      <th className="px-3 py-2">Item Unit</th>
-                      <th className="px-3 py-2">Price</th>
-                      <th className="px-3 py-2">Discount %</th>
-                      <th className="px-3 py-2">Discount Amount Item</th>
-                      <th className="px-3 py-2">Discount Amount</th>
-                      <th className="px-3 py-2">Tax</th>
-                      <th className="px-3 py-2">Amount</th>
-                      <th className="px-3 py-2">Action</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Kode Item</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Nama Item</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Qty</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Item Unit</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Price</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Discount %</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Discount Amount Item</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Discount Amount</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Tax</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Gudang</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Amount</th>
+                      <th className="px-1 py-1 text-center font-bold border" style={{ borderColor: theme.cardBorderColor, fontSize: '0.95em' }}>Action</th>
                     </tr>
                   </thead>
                   <tbody>
                     {items.map((item, index) => (
-                      <tr key={item.id} style={{ background: index % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor, color: theme.tableFontColor }}>
-                        <td className="px-2 py-1">
+                      <tr key={item.id} className="items-center" style={{ background: index % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor, color: theme.tableFontColor }}>
+                        <td className="px-1 py-1 align-middle border" style={{ borderColor: theme.cardBorderColor }}>
                           <select value={item.kodeItem} onChange={e => {
                             const selected = masterBarangJasa.find(m => m.kode === e.target.value);
                             handleItemChange(index, 'kodeItem', e.target.value);
                             handleItemChange(index, 'namaItem', selected ? selected.nama : '');
                             handleItemChange(index, 'unit', selected ? selected.satuan : '');
                             handleItemChange(index, 'price', selected ? selected.hargaJual : 0);
-                          }} className="w-full px-1 py-1 text-xs border border-gray-200 rounded">
+                          }} className="w-full text-xs border rounded focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}}>
                             <option value="">Pilih Kode</option>
                             {masterBarangJasa.map(item => (
                               <option key={item.id} value={item.kode}>{item.kode}</option>
                             ))}
                           </select>
                         </td>
-                        <td className="px-2 py-1">
-                          <input type="text" value={item.namaItem} onChange={e => handleItemChange(index, 'namaItem', e.target.value)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded" />
+                        <td className="px-1 py-1 align-middle border" style={{ borderColor: theme.cardBorderColor }}>
+                          <input type="text" value={item.namaItem} onChange={e => handleItemChange(index, 'namaItem', e.target.value)} className="w-full text-xs border rounded focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}} />
                         </td>
-                        <td className="px-2 py-1">
-                          <input type="number" value={item.qty} onChange={e => handleItemChange(index, 'qty', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" />
+                        <td className="px-1 py-1 align-middle border text-right" style={{ borderColor: theme.cardBorderColor }}>
+                          <input type="number" value={item.qty} onChange={e => handleItemChange(index, 'qty', parseFloat(e.target.value) || 0)} className="w-full text-xs border rounded text-right focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}} min="0" />
                         </td>
-                        <td className="px-2 py-1">
-                          <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded" />
+                        <td className="px-1 py-1 align-middle border" style={{ borderColor: theme.cardBorderColor }}>
+                          <input type="text" value={item.unit} onChange={e => handleItemChange(index, 'unit', e.target.value)} className="w-full text-xs border rounded focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}} />
                         </td>
-                        <td className="px-2 py-1">
-                          <input type="number" value={item.price} onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" />
+                        <td className="px-1 py-1 align-middle border text-right" style={{ borderColor: theme.cardBorderColor }}>
+                          <input type="number" value={item.price} onChange={e => handleItemChange(index, 'price', parseFloat(e.target.value) || 0)} className="w-full text-xs border rounded text-right focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}} min="0" />
                         </td>
-                        <td className="px-2 py-1">
-                          <input type="number" value={item.discPercent} onChange={e => handleItemChange(index, 'discPercent', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" max="100" />
+                        <td className="px-1 py-1 align-middle border text-right" style={{ borderColor: theme.cardBorderColor }}>
+                          <input type="number" value={item.discPercent} onChange={e => handleItemChange(index, 'discPercent', parseFloat(e.target.value) || 0)} className="w-full text-xs border rounded text-right focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}} min="0" max="100" />
                         </td>
-                        <td className="px-2 py-1">
-                          <input type="number" value={item.discAmountItem} onChange={e => handleItemChange(index, 'discAmountItem', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" />
+                        <td className="px-1 py-1 align-middle border text-right" style={{ borderColor: theme.cardBorderColor }}>
+                          <input type="number" value={item.discAmountItem} onChange={e => handleItemChange(index, 'discAmountItem', parseFloat(e.target.value) || 0)} className="w-full text-xs border rounded text-right focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}} min="0" />
                         </td>
-                        <td className="px-2 py-1 text-right">
+                        <td className="px-1 py-1 align-middle border text-right" style={{ borderColor: theme.cardBorderColor }}>
                           <span className="text-xs">{item.discAmount.toLocaleString('id-ID')}</span>
                         </td>
-                        <td className="px-2 py-1">
-                          <input type="number" value={item.tax} onChange={e => handleItemChange(index, 'tax', parseFloat(e.target.value) || 0)} className="w-full px-1 py-1 text-xs border border-gray-200 rounded text-right" min="0" max="100" />
+                        <td className="px-1 py-1 align-middle border text-right" style={{ borderColor: theme.cardBorderColor }}>
+                          <input type="number" value={item.tax} onChange={e => handleItemChange(index, 'tax', parseFloat(e.target.value) || 0)} className="w-full text-xs border rounded text-right focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}} min="0" max="100" />
                         </td>
-                        <td className="px-2 py-1 text-right">
+                        <td className="px-1 py-1 align-middle border" style={{ borderColor: theme.cardBorderColor }}>
+                          <select value={item.gudang || ''} onChange={e => handleItemChange(index, 'gudang', e.target.value)} className="w-full text-xs border rounded focus:outline-none focus:ring-2 focus:ring-blue-200" style={{...inputStyle(theme)}}>
+                            <option value="">Pilih Gudang</option>
+                            {masterGudang.map(g => (
+                              <option key={g.id} value={g.id}>{g.nama}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className="px-1 py-1 align-middle border text-right font-semibold" style={{ borderColor: theme.cardBorderColor }}>
                           <span className="text-xs font-semibold">{item.amount.toLocaleString('id-ID')}</span>
                         </td>
-                        <td className="px-2 py-1">
-                          <Button onClick={() => removeItem(index)} style={{ background: theme.buttonHapus, color: "#fff", fontFamily: theme.fontFamily, fontSize: 12, border: `2px solid ${theme.buttonHapus}` }} disabled={items.length === 1}>
+                        <td className="px-1 py-1 align-middle border text-center" style={{ borderColor: theme.cardBorderColor }}>
+                          <Button onClick={() => removeItem(index)} style={{ background: theme.buttonHapus, color: "#fff", fontFamily: theme.fontFamily, fontSize: 12, border: `2px solid ${theme.buttonHapus}`, marginLeft: 4, minWidth: 60 }}>
                             Hapus
                           </Button>
                         </td>
@@ -589,10 +567,10 @@ useEffect(() => {
                   </tbody>
                   <tfoot>
                     <tr style={{ background: theme.tableFooterColor, color: theme.tableFontColor }}>
-                      <td colSpan="9" className="border px-2 py-2 text-right" style={{ borderColor: theme.cardBorderColor }}>
+                      <td colSpan="9" className="border px-1 py-1 text-right font-bold" style={{ borderColor: theme.cardBorderColor }}>
                         Total:
                       </td>
-                      <td className="border px-2 py-2 text-right" style={{ borderColor: theme.cardBorderColor }}>
+                      <td className="border px-1 py-1 text-right font-bold" style={{ borderColor: theme.cardBorderColor }}>
                         Rp {calculateTotal().toLocaleString('id-ID')}
                       </td>
                       <td className="border"></td>
@@ -601,6 +579,97 @@ useEffect(() => {
                 </table>
               </div>
             </div>
+
+            {/* Modal Popup Tambah Item */}
+            {showModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+                <div className="rounded-lg shadow-lg p-6 min-w-[340px] max-w-[90vw] w-full" style={{background: theme.cardColor, color: theme.fontColor, fontFamily: theme.fontFamily, border: `1px solid ${theme.cardBorderColor}`}}>
+                  <h2 className="text-base font-bold mb-4" style={{color: theme.fontColor}}>Pilih Item</h2>
+                  <div className="mb-2 flex flex-col gap-2">
+                    <input
+                      type="text"
+                      placeholder="Filter kode/deskripsi..."
+                      value={modalFilter}
+                      onChange={e => setModalFilter(e.target.value)}
+                      className="px-2 py-1 rounded border text-sm"
+                      style={{background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.dropdownColor, minWidth: 180}}
+                    />
+                    <div className="flex items-center gap-2">
+                      <span className="font-semibold text-sm" style={{color: theme.fontColor}}>Gudang:</span>
+                      <select
+                        value={formData.gudang}
+                        onChange={e => setFormData(prev => ({...prev, gudang: e.target.value}))}
+                        className="px-2 py-1 rounded border text-sm"
+                        style={{background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.dropdownColor, minWidth: 120}}
+                      >
+                        <option value="">Pilih Gudang</option>
+                        {masterGudang.map(g => (
+                          <option key={g.id} value={g.id}>{g.nama}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto mb-4">
+                    <table className="min-w-max w-full border-collapse text-xs" style={{fontFamily: theme.tableFontFamily}}>
+                      <thead style={{background: theme.tableHeaderColor, color: theme.tableFontColor}}>
+                        <tr>
+                          <th className="px-1 py-1 text-center font-bold border" style={{borderColor: theme.cardBorderColor, fontSize: '0.95em'}}>#</th>
+                          <th className="px-1 py-1 text-center font-bold border" style={{borderColor: theme.cardBorderColor, fontSize: '0.95em'}}>Kode Item</th>
+                          <th className="px-1 py-1 text-center font-bold border" style={{borderColor: theme.cardBorderColor, fontSize: '0.95em'}}>Deskripsi</th>
+                          <th className="px-1 py-1 text-center font-bold border" style={{borderColor: theme.cardBorderColor, fontSize: '0.95em'}}>Gudang</th>
+                          <th className="px-1 py-1 text-center font-bold border" style={{borderColor: theme.cardBorderColor, fontSize: '0.95em'}}>Stock</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {masterBarangJasa.filter(item =>
+                          item.kode?.toLowerCase().includes(modalFilter.toLowerCase()) ||
+                          item.nama?.toLowerCase().includes(modalFilter.toLowerCase())
+                        ).map((item, idx) => (
+                          <tr key={item.id} style={{background: idx % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor, color: theme.tableFontColor}}>
+                            <td className="px-1 py-1 text-center border" style={{borderColor: theme.cardBorderColor}}>
+                              <input type="checkbox" checked={selectedModalItems.includes(item.id)} onChange={e => {
+                                setSelectedModalItems(e.target.checked
+                                  ? [...selectedModalItems, item.id]
+                                  : selectedModalItems.filter(id => id !== item.id));
+                              }} />
+                            </td>
+                            <td className="px-1 py-1 text-center border" style={{borderColor: theme.cardBorderColor}}>{item.kode}</td>
+                            <td className="px-1 py-1 border" style={{borderColor: theme.cardBorderColor}}>{item.nama}</td>
+                            <td className="px-1 py-1 text-center border" style={{borderColor: theme.cardBorderColor}}>{masterGudang.find(g => String(g.id) === String(formData.gudang))?.nama || '-'}</td>
+                            <td className="px-1 py-1 text-center border" style={{borderColor: theme.cardBorderColor}}>{item.stock || 0}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex justify-end gap-2 mt-4">
+                    <Button onClick={() => setShowModal(false)} style={{background: theme.buttonHapus, color: '#fff'}}>Batal</Button>
+                    <Button onClick={() => {
+                      // Add selected items to detail
+                      const selectedItems = masterBarangJasa.filter(item => selectedModalItems.includes(item.id));
+                      const newDetailItems = selectedItems.map((item, idx) => ({
+                        id: Date.now() + idx,
+                        kodeItem: item.kode,
+                        namaItem: item.nama,
+                        qty: 0,
+                        unit: item.satuan || '',
+                        price: item.hargaJual || 0,
+                        discPercent: 0,
+                        discAmountItem: 0,
+                        discAmount: 0,
+                        tax: 0,
+                        amount: 0,
+                        gudang: formData.gudang
+                      }));
+                      setItems(prev => [...prev, ...newDetailItems]);
+                      setShowModal(false);
+                      setSelectedModalItems([]);
+                      setModalFilter("");
+                    }} style={{background: theme.buttonSimpan, color: '#fff'}}>Add</Button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Bagian Bawah */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-8">

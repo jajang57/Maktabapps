@@ -67,6 +67,7 @@ func main() {
 		&models.MasterDepartement{},
 		&models.MasterPembeli{},
 		&models.MasterPemasok{},
+		&models.MasterMataUang{},
 	)
 
 	if err != nil {
@@ -218,6 +219,12 @@ func main() {
 		api.POST("/pemasok", handlers.CreateMasterPemasok(db))
 		api.PUT("/pemasok/:id", handlers.UpdateMasterPemasok(db))
 		api.DELETE("/pemasok/:id", handlers.DeleteMasterPemasok(db))
+
+		// Master Mata Uang Routes
+		api.GET("/master-mata-uang", handlers.GetMasterMataUangList(db))
+		api.POST("/master-mata-uang", handlers.CreateMasterMataUang(db))
+		api.PUT("/master-mata-uang/:id", handlers.UpdateMasterMataUang(db))
+		api.DELETE("/master-mata-uang/:id", handlers.DeleteMasterMataUang(db))
 	}
 
 	r.Run("0.0.0.0:8080")

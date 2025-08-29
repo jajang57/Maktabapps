@@ -511,23 +511,25 @@ export default function MasterGudang() {
                   <td className="px-4 py-2">{row.deskripsi}</td>
                   <td className="px-4 py-2">{row.alamat}</td>
                   <td className="px-4 py-2">{row.penanggungJawab}</td>
-                  <td className="px-4 py-2">
-                    <button
-                      type="button"
-                      onClick={() => handleEdit(idx)}
-                      className="px-3 py-1 rounded font-semibold mr-2"
-                      style={{ background: theme.buttonUpdate, color: "#fff", fontFamily: theme.fontFamily }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleDelete(idx)}
-                      className="px-3 py-1 rounded font-semibold"
-                      style={{ background: theme.buttonHapus, color: "#fff", fontFamily: theme.fontFamily }}
-                    >
-                      Hapus
-                    </button>
+                  <td className="px-4 py-2 text-center">
+                    <div className="flex justify-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleEdit(idx)}
+                        className="px-4 py-1 rounded font-semibold transition-colors duration-150 hover:brightness-90"
+                        style={{ background: theme.buttonUpdate, color: "#fff", fontFamily: theme.fontFamily }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(idx)}
+                        className="px-4 py-1 rounded font-semibold transition-colors duration-150 hover:brightness-90"
+                        style={{ background: theme.buttonHapus, color: "#fff", fontFamily: theme.fontFamily }}
+                      >
+                        Hapus
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))

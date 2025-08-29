@@ -47,6 +47,7 @@ type PenjualanDetail struct {
 	DiscAmount     float64 `json:"discAmount"`
 	Tax            float64 `json:"tax"`
 	Amount         float64 `json:"amount"`
+	GudangID       uint    `json:"gudangId"` // field gudang di detail barang/jasa
 }
 
 func (PenjualanDetail) TableName() string {

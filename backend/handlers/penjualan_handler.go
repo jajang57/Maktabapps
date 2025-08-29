@@ -57,13 +57,20 @@ func (h *PenjualanHandler) CreatePenjualan(c *gin.Context) {
 	req.PPN = ppn
 	req.Total = subtotal + ppn + req.Freight + req.Stamp
 
+	// Pastikan GudangID di detail ikut tersimpan
+	for i := range req.Details {
+		if req.Details[i].GudangID == 0 {
+			req.Details[i].GudangID = req.GudangID
+		}
+	}
 	// Simpan header + detail (relasi)
 	if err := h.DB.Create(&req).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal simpan penjualan", "details": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, req)
+	// Setelah berhasil, kembalikan response kosong
+	c.JSON(http.StatusCreated, gin.H{"success": true, "reset": true})
 }
 
 // Get All Penjualan (beserta detail)
@@ -141,6 +148,9 @@ func (h *PenjualanHandler) UpdatePenjualan(c *gin.Context) {
 	}
 	for i := range req.Details {
 		req.Details[i].PenjualanID = penjualan.ID
+		if req.Details[i].GudangID == 0 {
+			req.Details[i].GudangID = penjualan.GudangID
+		}
 	}
 	if err := tx.Create(&req.Details).Error; err != nil {
 		tx.Rollback()
@@ -149,7 +159,8 @@ func (h *PenjualanHandler) UpdatePenjualan(c *gin.Context) {
 	}
 	tx.Commit()
 
-	c.JSON(http.StatusOK, penjualan)
+	// Setelah berhasil, kembalikan response kosong
+	c.JSON(http.StatusOK, gin.H{"success": true, "reset": true})
 }
 
 // Delete Penjualan
@@ -161,12 +172,12 @@ func (h *PenjualanHandler) DeletePenjualan(c *gin.Context) {
 		return
 	}
 	tx := h.DB.Begin()
-	if err := tx.Where("penjualan_id = ?", penjualan.ID).Delete(&models.PenjualanDetail{}).Error; err != nil {
+	if err := tx.Unscoped().Where("penjualan_id = ?", penjualan.ID).Delete(&models.PenjualanDetail{}).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hapus detail"})
 		return
 	}
-	if err := tx.Delete(&penjualan).Error; err != nil {
+	if err := tx.Unscoped().Delete(&penjualan).Error; err != nil {
 		tx.Rollback()
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal hapus header"})
 		return
