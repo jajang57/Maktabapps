@@ -68,6 +68,7 @@ func main() {
 		&models.MasterPembeli{},
 		&models.MasterPemasok{},
 		&models.MasterMataUang{},
+		&models.MasterPajak{},
 	)
 
 	if err != nil {
@@ -220,11 +221,20 @@ func main() {
 		api.PUT("/pemasok/:id", handlers.UpdateMasterPemasok(db))
 		api.DELETE("/pemasok/:id", handlers.DeleteMasterPemasok(db))
 
-		// Master Mata Uang Routes
-		api.GET("/master-mata-uang", handlers.GetMasterMataUangList(db))
-		api.POST("/master-mata-uang", handlers.CreateMasterMataUang(db))
-		api.PUT("/master-mata-uang/:id", handlers.UpdateMasterMataUang(db))
-		api.DELETE("/master-mata-uang/:id", handlers.DeleteMasterMataUang(db))
+		//Master Mata Uang Routes
+		api.GET("/master-mata-uang", handlers.GetMasterMataUang(db))           // Mengambil semua data mata uang
+		api.POST("/master-mata-uang", handlers.CreateMasterMataUang(db))       // Menambahkan data mata uang
+		api.PUT("/master-mata-uang/:id", handlers.UpdateMasterMataUang(db))    // Mengupdate data mata uang berdasarkan ID
+		api.DELETE("/master-mata-uang/:id", handlers.DeleteMasterMataUang(db)) // Menghapus data mata uang berdasarkan ID
+		//api.GET("/master-mata-uang/by-kode", handlers.GetMasterMataUangByKode(db)) // Mengambil data mata uang berdasarkan kode
+		api.GET("/master-mata-uang/:id", handlers.GetMasterMataUangByID(db)) // Mengambil data mata uang berdasarkan ID
+
+		// Master Pajak Routes
+		api.POST("/master-pajak", handlers.CreateMasterPajak(db))
+		api.GET("/master-pajak", handlers.GetMasterPajakList(db))
+		api.GET("/master-pajak/:id", handlers.GetMasterPajakByID(db))
+		api.PUT("/master-pajak/:id", handlers.UpdateMasterPajak(db))
+		api.DELETE("/master-pajak/:id", handlers.DeleteMasterPajak(db))
 	}
 
 	r.Run("0.0.0.0:8080")

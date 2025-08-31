@@ -1055,8 +1055,30 @@ export default function MasterBarangJasa() {
                           }),
                           menu: (base) => ({
                             ...base,
-                            zIndex: 20
-                          })
+                            background: theme.fieldColor, // Sesuaikan latar belakang dropdown
+                            color: theme.fontColor, // Sesuaikan warna teks dropdown
+                            fontFamily: theme.fontFamily, // Sesuaikan font dropdown
+                            zIndex: 20,
+                          }),
+                          option: (base, state) => ({
+                            ...base,
+                            background: state.isSelected ? theme.buttonSimpan : theme.fieldColor, // Warna saat dipilih
+                            color: state.isSelected ? "#fff" : theme.fontColor, // Warna teks saat dipilih
+                            fontFamily: theme.fontFamily,
+                            "&:hover": {
+                              background: theme.buttonUpdate, // Warna saat hover
+                              color: "#fff",
+                            },
+                          }), singleValue: (base) => ({
+                            ...base,
+                            color: theme.fontColor, // Warna teks pada nilai yang dipilih
+                            fontFamily: theme.fontFamily,
+                          }),
+                          placeholder: (base) => ({
+                            ...base,
+                            color: theme.placeholderColor, // Warna teks placeholder
+                            fontFamily: theme.fontFamily,
+                          }),
                         }}
                         required={required.includes(f.key)}
                       />

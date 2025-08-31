@@ -16,6 +16,7 @@ export default function MasterPemasok() {
   const [notifikasi, setNotifikasi] = useState("");
 
   const [pemasokList, setPemasokList] = useState([]);
+  const [mataUangList, setMataUangList] = useState([]);
   const [formData, setFormData] = useState({
     kode: "",
     nama: "",
@@ -51,6 +52,7 @@ export default function MasterPemasok() {
 
   useEffect(() => {
     fetchPemasok();
+    fetchMataUang();
   }, []);
 
   const fetchPemasok = async () => {
@@ -60,6 +62,15 @@ export default function MasterPemasok() {
     } catch (error) {
       console.error("Error fetching pemasok:", error);
       setPemasokList([]);
+    }
+  };
+
+  const fetchMataUang = async () => {
+    try {
+      const res = await api.get("/master-mata-uang");
+      setMataUangList(res.data || []);
+    } catch {
+      setMataUangList([]);
     }
   };
 
@@ -727,9 +738,7 @@ export default function MasterPemasok() {
               {activeTab === "term" && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                      Term Pembayaran (hari)
-                    </label>
+                    <label className="block text-sm font-medium mb-1">Term Pembayaran (hari)</label>
                     <input
                       type="number"
                       name="termPembayaran"
@@ -745,9 +754,7 @@ export default function MasterPemasok() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                      Limit Kredit
-                    </label>
+                    <label className="block text-sm font-medium mb-1">Limit Kredit</label>
                     <input
                       type="number"
                       name="limitKredit"
@@ -763,11 +770,8 @@ export default function MasterPemasok() {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-                      Mata Uang
-                    </label>
-                    <input
-                      type="text"
+                    <label className="block text-sm font-medium mb-1">Mata Uang</label>
+                    <select
                       name="mata_uang"
                       value={formData.mata_uang}
                       onChange={handleInputChange}
@@ -778,7 +782,14 @@ export default function MasterPemasok() {
                         fontFamily: theme.fontFamily,
                         borderColor: theme.dropdownColor,
                       }}
-                    />
+                    >
+                      <option value="">Pilih Mata Uang</option>
+                      {mataUangList.map((mu) => (
+                        <option key={mu.id} value={mu.id}>
+                          {mu.kode} - {mu.nama}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                 </div>
               )}

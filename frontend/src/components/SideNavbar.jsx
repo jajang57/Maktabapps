@@ -70,6 +70,8 @@ export default function SideNavbar({ onClose }) {
         { name: "Pemasok", to: "/master-data/pemasok" },
         { name: "Pembeli", to: "/master-data/pembeli" },
         { name: "Pekerjaan", to: "/master-data/project" },
+        { name: "Mata Uang", to: "/master-data/mata-uang" },
+        { name: "Pajak", to: "/master-data/pajak" },
       ],
     },
     {
@@ -83,7 +85,6 @@ export default function SideNavbar({ onClose }) {
       dropdown: [
   { name: "Barang Dan Jasa", to: "/master-data/barang-jasa" },
   { name: "Gudang", to: "/master-data/gudang" },
-  { name: "Mata Uang", to: "/master-data/mata-uang" },
   { name: "Penyesuaian Persediaan", to: "/master-data/penyesuaian-persediaan" },
       ],
     },
