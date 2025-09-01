@@ -131,11 +131,26 @@ useEffect(() => {
       const discAmountItem = item.discAmountItem || 0;
       const discAmount = (subtotal * item.discPercent) / 100 + discAmountItem;
       const afterDisc = subtotal - discAmount;
-      //const taxAmount = (afterDisc * item.tax) / 100;
-      newItems[index].discAmount = discAmount;
-      newItems[index].amount = afterDisc;
-    }
+      item.discAmount = discAmount;
 
+      // Reset taxamount
+      item.taxamount1 = 0;
+      item.taxamount2 = 0;
+      item.taxamount3 = 0;
+      // Hitung taxamount berdasarkan pajak yang dipilih
+      if (Array.isArray(item.tax)) {
+        item.tax.forEach(code => {
+          const pajak = masterPajak.find(p => p.code === code);
+          if (pajak) {
+            const pajakAmount = afterDisc * pajak.rate_percent / 100;
+            if (pajak.order === 1) item.taxamount1 += pajakAmount;
+            if (pajak.order === 2) item.taxamount2 += pajakAmount;
+            if (pajak.order === 3) item.taxamount3 += pajakAmount;
+          }
+        });
+      }
+      item.amount = afterDisc + item.taxamount1 + item.taxamount2 + item.taxamount3;
+    }
     setItems(newItems);
   };
 
@@ -152,6 +167,9 @@ useEffect(() => {
       discAmountItem: 0,
       discAmount: 0,
       tax: [], // array of pajak id
+      taxamount1: 0,
+      taxamount2: 0,
+      taxamount3: 0,
       amount: 0
     }]);
   };
@@ -161,7 +179,6 @@ useEffect(() => {
   };
 
   const calculateSubtotal = () => items.reduce((total, item) => total + (item.qty * item.price), 0);
-  const calculatePPN = () =>
   items.reduce((total, item) => {
     const subtotal = item.qty * item.price;
     const discAmountItem = item.discAmountItem || 0;
@@ -173,21 +190,29 @@ useEffect(() => {
   const calculateTotal = () => items.reduce((total, item) => total + (item.amount || 0), 0);
 
   const handleSave = async () => {
+    // Hitung summary taxamount1,2,3
+    const summaryTaxamount1 = items.reduce((sum, item) => sum + (item.taxamount1 || 0), 0);
+    const summaryTaxamount2 = items.reduce((sum, item) => sum + (item.taxamount2 || 0), 0);
+    const summaryTaxamount3 = items.reduce((sum, item) => sum + (item.taxamount3 || 0), 0);
+
     try {
       const invoiceData = {
         nomorInvoice: formData.nomorInvoice,
-        tanggal: formData.tanggal, // atau tanggalStr jika backend pakai string
-        dueDate: formData.dueDate, // atau dueDateStr
+        tanggal: formData.tanggal,
+        dueDate: formData.dueDate,
         customerId: formData.customer ? Number(formData.customer) : null,
         gudangId: Number(formData.gudang),
         departementId: Number(formData.departement),
         nomorEfaktur: formData.nomorEfaktur,
         notes: formData.notes,
         subtotal: calculateSubtotal(),
-        ppn: calculatePPN(),
+        ppn: 0,
         freight: parseFloat(formData.freight) || 0,
         stamp: parseFloat(formData.stamp) || 0,
         total: calculateTotal() + (parseFloat(formData.freight) || 0) + (parseFloat(formData.stamp) || 0),
+        taxamount1: summaryTaxamount1,
+        taxamount2: summaryTaxamount2,
+        taxamount3: summaryTaxamount3,
         status: 'draft',
         details: items.map(item => ({
           kodeItem: item.kodeItem,
@@ -199,8 +224,11 @@ useEffect(() => {
           discAmountItem: item.discAmountItem,
           discAmount: item.discAmount,
           tax: item.tax,
+          taxamount1: item.taxamount1,
+          taxamount2: item.taxamount2,
+          taxamount3: item.taxamount3,
           amount: item.amount,
-          gudang: item.gudang // pastikan gudang ikut ke detail
+          gudang: item.gudang
         }))
       };
 
@@ -655,6 +683,36 @@ useEffect(() => {
       size: 80,
     },
     {
+      accessorKey: 'taxamount1',
+      header: 'Tax Amount 1',
+      cell: info => (
+        <span className="text-xs font-semibold" style={{ textAlign: 'right', display: 'block', width: '100%' }}>
+          {info.row.original.taxamount1?.toLocaleString('id-ID')}
+        </span>
+      ),
+      size: 70,
+    },
+    {
+      accessorKey: 'taxamount2',
+      header: 'Tax Amount 2',
+      cell: info => (
+        <span className="text-xs font-semibold" style={{ textAlign: 'right', display: 'block', width: '100%' }}>
+          {info.row.original.taxamount2?.toLocaleString('id-ID')}
+        </span>
+      ),
+      size: 70,
+    },
+    {
+      accessorKey: 'taxamount3',
+      header: 'Tax Amount 3',
+      cell: info => (
+        <span className="text-xs font-semibold" style={{ textAlign: 'right', display: 'block', width: '100%' }}>
+          {info.row.original.taxamount3?.toLocaleString('id-ID')}
+        </span>
+      ),
+      size: 70,
+    },
+    {
       id: 'action',
       header: 'Action',
       cell: info => (
@@ -1103,10 +1161,40 @@ useEffect(() => {
                     <span>Sub Total:</span>
                     <span className="font-semibold">Rp {calculateSubtotal().toLocaleString('id-ID')}</span>
                   </div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span>PPN:</span>
-                    <span className="font-semibold">Rp {calculatePPN().toLocaleString('id-ID')}</span>
-                  </div>
+                  {/* Pajak summary dinamis */}
+                  {(() => {
+                    // Hitung total taxamount1,2,3
+                    const totalTax1 = items.reduce((sum, item) => sum + (item.taxamount1 || 0), 0);
+                    const totalTax2 = items.reduce((sum, item) => sum + (item.taxamount2 || 0), 0);
+                    const totalTax3 = items.reduce((sum, item) => sum + (item.taxamount3 || 0), 0);
+                    // Ambil nama pajak sesuai urutan
+                    const pajak1 = masterPajak.find(p => p.order === 1);
+                    const pajak2 = masterPajak.find(p => p.order === 2);
+                    const pajak3 = masterPajak.find(p => p.order === 3);
+                    return (
+                      <>
+                        {totalTax1 !== 0 && (
+                          <div className="flex justify-between items-center mb-2">
+                            <span>{pajak1 ? pajak1.tax_name : 'Tax Amount 1'}:</span>
+                            <span className="font-semibold">Rp {totalTax1.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {totalTax2 !== 0 && (
+                          <div className="flex justify-between items-center mb-2">
+                            <span>{pajak2 ? pajak2.tax_name : 'Tax Amount 2'}:</span>
+                            <span className="font-semibold">Rp {totalTax2.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                        {totalTax3 !== 0 && (
+                          <div className="flex justify-between items-center mb-2">
+                            <span>{pajak3 ? pajak3.tax_name : 'Tax Amount 3'}:</span>
+                            <span className="font-semibold">Rp {totalTax3.toLocaleString('id-ID')}</span>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+               
                   <div className="flex justify-between items-center mb-2">
                     <span>Freight:</span>
                     <Input type="number" name="freight" value={formData.freight || 0} onChange={handleInputChange} style={{ ...inputStyle(theme), width: 80, textAlign: "right" }} />

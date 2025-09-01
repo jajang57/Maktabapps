@@ -14,6 +14,7 @@ export default function MasterPajak() {
     description: "",
     sales_tax_account: "",
     purchase_tax_account: "",
+    order: "",
   });
   const [data, setData] = useState([]);
   const [editId, setEditId] = useState(null);
@@ -24,6 +25,7 @@ export default function MasterPajak() {
     description: "",
     sales_tax_account: "",
     purchase_tax_account: "",
+    order: "",
   });
   const [accountData, setAccountData] = useState([]);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -56,7 +58,8 @@ export default function MasterPajak() {
     const { name, value } = e.target;
     setForm({
       ...form,
-      [name]: name === "rate_percent" ? parseFloat(value) || "" : value
+      [name]: name === "rate_percent" ? parseFloat(value) || ""
+        : name === "order" ? parseInt(value) || "" : value
     });
   };
 
@@ -80,6 +83,7 @@ export default function MasterPajak() {
         description: "",
         sales_tax_account: "",
         purchase_tax_account: "",
+        order: "",
       });
       setEditId(null);
     } catch (err) {
@@ -88,7 +92,10 @@ export default function MasterPajak() {
   };
 
   const handleEdit = (idx) => {
-    setForm(data[idx]);
+    setForm({
+      ...data[idx],
+      order: data[idx].order || ""
+    });
     setEditId(idx);
     setFormVisible(true);
   };
@@ -105,6 +112,7 @@ export default function MasterPajak() {
         description: "",
         sales_tax_account: "",
         purchase_tax_account: "",
+        order: "",
       });
       setEditId(null);
     } catch (err) {
@@ -120,6 +128,7 @@ export default function MasterPajak() {
       description: "",
       sales_tax_account: "",
       purchase_tax_account: "",
+      order: "",
     });
     setEditId(null);
   };
@@ -147,7 +156,8 @@ export default function MasterPajak() {
     row.code.toLowerCase().includes(filter.code.toLowerCase()) &&
     row.description.toLowerCase().includes(filter.description.toLowerCase()) &&
     row.sales_tax_account.toLowerCase().includes(filter.sales_tax_account.toLowerCase()) &&
-    row.purchase_tax_account.toLowerCase().includes(filter.purchase_tax_account.toLowerCase())
+    row.purchase_tax_account.toLowerCase().includes(filter.purchase_tax_account.toLowerCase()) &&
+    (row.order ? row.order.toString().includes(filter.order.toString()) : true)
   );
 
   const getAkunGLName = (kode) => {
@@ -184,6 +194,20 @@ export default function MasterPajak() {
           </div>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                  Urutan
+                </label>
+                <input
+                  type="number"
+                  name="order"
+                  value={form.order}
+                  onChange={handleChange}
+                  className="w-full border rounded-lg px-4 py-2"
+                  placeholder="Urutan"
+                  style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                />
+              </div>
               <div>
                 <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Nama Pajak
@@ -320,78 +344,89 @@ export default function MasterPajak() {
       <div className="rounded-xl shadow-lg p-6 border mt-4" style={{ maxHeight: '500px', overflowY: 'auto' }}>
         <h2 className="text-lg font-bold mb-4" style={{ color: theme.fontColor }}>Data Pajak</h2>
         <table className="min-w-full rounded-lg" style={{ fontFamily: theme.tableFontFamily }}>
-          <thead>
+          <thead style={{ fontSize: '0.95rem' }}>
             <tr style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
-              <th className="px-4 py-2">Nama Pajak</th>
-              <th className="px-4 py-2">Persentase Pajak (%)</th>
-              <th className="px-4 py-2">Kode Pajak</th>
-              <th className="px-4 py-2">Deskripsi</th>
-              <th className="px-4 py-2">Akun Pajak Penjualan</th>
-              <th className="px-4 py-2">Akun Pajak Pembelian</th>
-              <th className="px-4 py-2">Aksi</th>
+              <th className="px-2 py-2 text-center rounded-tl-lg">Urutan</th>
+              <th className="px-2 py-2 text-center">Nama Pajak</th>
+              <th className="px-2 py-2 text-center">Persentase Pajak (%)</th>
+              <th className="px-2 py-2 text-center">Kode Pajak</th>
+              <th className="px-2 py-2 text-center">Deskripsi</th>
+              <th className="px-2 py-2 text-center">Akun Pajak Penjualan</th>
+              <th className="px-2 py-2 text-center">Akun Pajak Pembelian</th>
+              <th className="px-2 py-2 text-center rounded-tr-lg">Aksi</th>
             </tr>
-            <tr>
-              <th className="px-4 py-2">
+            <tr style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
+              <th className="px-1 py-1">
+                <input
+                  type="text"
+                  placeholder="Filter Urutan"
+                  value={filter.order}
+                  onChange={e => setFilter({ ...filter, order: e.target.value })}
+                  className="w-full px-1 py-1 rounded border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                />
+              </th>
+              <th className="px-1 py-1">
                 <input
                   type="text"
                   placeholder="Filter Tax Name"
                   value={filter.tax_name}
                   onChange={e => setFilter({ ...filter, tax_name: e.target.value })}
-                  className="w-full px-2 py-1 rounded border"
+                  className="w-full px-1 py-1 rounded border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
                   style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
                 />
               </th>
-              <th className="px-4 py-2">
+              <th className="px-1 py-1">
                 <input
                   type="text"
                   placeholder="Filter Rate %"
                   value={filter.rate_percent}
                   onChange={e => setFilter({ ...filter, rate_percent: e.target.value })}
-                  className="w-full px-2 py-1 rounded border"
+                  className="w-full px-1 py-1 rounded border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
                   style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
                 />
               </th>
-              <th className="px-4 py-2">
+              <th className="px-1 py-1">
                 <input
                   type="text"
                   placeholder="Filter Code"
                   value={filter.code}
                   onChange={e => setFilter({ ...filter, code: e.target.value })}
-                  className="w-full px-2 py-1 rounded border"
+                  className="w-full px-1 py-1 rounded border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
                   style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
                 />
               </th>
-              <th className="px-4 py-2">
+              <th className="px-1 py-1">
                 <input
                   type="text"
                   placeholder="Filter Description"
                   value={filter.description}
                   onChange={e => setFilter({ ...filter, description: e.target.value })}
-                  className="w-full px-2 py-1 rounded border"
+                  className="w-full px-1 py-1 rounded border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
                   style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
                 />
               </th>
-              <th className="px-4 py-2">
+              <th className="px-1 py-1">
                 <input
                   type="text"
                   placeholder="Filter Sales Tax Account"
                   value={filter.sales_tax_account}
                   onChange={e => setFilter({ ...filter, sales_tax_account: e.target.value })}
-                  className="w-full px-2 py-1 rounded border"
+                  className="w-full px-1 py-1 rounded border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
                   style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
                 />
               </th>
-              <th className="px-4 py-2">
+              <th className="px-1 py-1">
                 <input
                   type="text"
                   placeholder="Filter Purchase Tax Account"
                   value={filter.purchase_tax_account}
                   onChange={e => setFilter({ ...filter, purchase_tax_account: e.target.value })}
-                  className="w-full px-2 py-1 rounded border"
+                  className="w-full px-1 py-1 rounded border text-xs focus:outline-none focus:ring-2 focus:ring-blue-400"
                   style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
                 />
               </th>
-              <th className="px-4 py-2"></th>
+              <th className="px-1 py-1"></th>
             </tr>
           </thead>
           <tbody>
@@ -403,19 +438,20 @@ export default function MasterPajak() {
               </tr>
             ) : (
               filteredData.map((row, idx) => (
-                <tr key={idx} className="border-b" style={{ borderColor: theme.tableBorder }}>
-                  <td className="px-4 py-2">{row.tax_name}</td>
-                  <td className="px-4 py-2">{row.rate_percent}</td>
-                  <td className="px-4 py-2">{row.code}</td>
-                  <td className="px-4 py-2">{row.description}</td>
-                  <td className="px-4 py-2">{getAkunGLName(row.sales_tax_account)}</td>
-                  <td className="px-4 py-2">{getAkunGLName(row.purchase_tax_account)}</td>
-                  <td className="px-4 py-2 text-center">
+                <tr key={idx} className="border-b transition duration-200 hover:bg-blue-950/40 text-sm" style={{ borderColor: theme.tableBorder }}>
+                  <td className="px-2 py-2 text-center font-semibold">{row.order}</td>
+                  <td className="px-2 py-2 text-center">{row.tax_name}</td>
+                  <td className="px-2 py-2 text-center">{row.rate_percent}</td>
+                  <td className="px-2 py-2 text-center">{row.code}</td>
+                  <td className="px-2 py-2 text-center">{row.description}</td>
+                  <td className="px-2 py-2 text-center">{getAkunGLName(row.sales_tax_account)}</td>
+                  <td className="px-2 py-2 text-center">{getAkunGLName(row.purchase_tax_account)}</td>
+                  <td className="px-2 py-2 text-center">
                     <div className="flex justify-center gap-2">
                       <button
                         type="button"
                         onClick={() => handleEdit(idx)}
-                        className="px-4 py-1 rounded font-semibold transition-colors duration-150 hover:brightness-90"
+                        className="px-3 py-1 rounded font-semibold text-xs transition duration-150 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-blue-400"
                         style={{ background: theme.buttonUpdate, color: "#fff", fontFamily: theme.fontFamily }}
                       >
                         Edit
@@ -423,7 +459,7 @@ export default function MasterPajak() {
                       <button
                         type="button"
                         onClick={() => handleDelete(idx)}
-                        className="px-4 py-1 rounded font-semibold transition-colors duration-150 hover:brightness-90"
+                        className="px-3 py-1 rounded font-semibold text-xs transition duration-150 hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-400"
                         style={{ background: theme.buttonHapus, color: "#fff", fontFamily: theme.fontFamily }}
                       >
                         Hapus

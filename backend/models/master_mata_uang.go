@@ -24,6 +24,8 @@ type MasterMataUang struct {
 	KeuntunganBelumDirealisasi string         `json:"KeuntunganBelumDirealisasi"`
 	HutangJatuhTempo           string         `json:"HutangJatuhTempo"`
 	PiutangJatuhTempo          string         `json:"PiutangJatuhTempo"`
+	BiayaLainLain              string         `json:"BiayaLainLain"`
+	BiayaMaterai               string         `json:"BiayaMaterai"`
 	CreatedAt                  time.Time      `json:"created_at"`
 	UpdatedAt                  time.Time      `json:"updated_at"`
 	DeletedAt                  gorm.DeletedAt `json:"deleted_at" gorm:"index"` // Soft delete

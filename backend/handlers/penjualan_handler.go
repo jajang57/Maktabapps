@@ -45,17 +45,16 @@ func (h *PenjualanHandler) CreatePenjualan(c *gin.Context) {
 		req.DueDate = due
 	}
 
-	// Hitung total dari detail
-	var subtotal, ppn float64
+	// Hitung total dari detail tanpa PPN
+	var subtotal float64
 	for i := range req.Details {
-		subtotal += req.Details[i].Qty * req.Details[i].Price
 		disc := (req.Details[i].Qty * req.Details[i].Price * req.Details[i].DiscPercent / 100) + req.Details[i].DiscAmountItem
 		afterDisc := (req.Details[i].Qty * req.Details[i].Price) - disc
-		ppn += afterDisc * req.Details[i].Tax / 100
+		subtotal += afterDisc
 	}
 	req.Subtotal = subtotal
-	req.PPN = ppn
-	req.Total = subtotal + ppn + req.Freight + req.Stamp
+	req.PPN = 0
+	req.Total = subtotal + req.Freight + req.Stamp
 
 	// Pastikan GudangID di detail ikut tersimpan
 	for i := range req.Details {
@@ -122,17 +121,16 @@ func (h *PenjualanHandler) UpdatePenjualan(c *gin.Context) {
 	penjualan.Stamp = req.Stamp
 	penjualan.Status = req.Status
 
-	// Hitung ulang total
-	var subtotal, ppn float64
+	// Hitung ulang total tanpa PPN
+	var subtotal float64
 	for i := range req.Details {
-		subtotal += req.Details[i].Qty * req.Details[i].Price
 		disc := (req.Details[i].Qty * req.Details[i].Price * req.Details[i].DiscPercent / 100) + req.Details[i].DiscAmountItem
 		afterDisc := (req.Details[i].Qty * req.Details[i].Price) - disc
-		ppn += afterDisc * req.Details[i].Tax / 100
+		subtotal += afterDisc
 	}
 	penjualan.Subtotal = subtotal
-	penjualan.PPN = ppn
-	penjualan.Total = subtotal + ppn + req.Freight + req.Stamp
+	penjualan.PPN = 0
+	penjualan.Total = subtotal + req.Freight + req.Stamp
 
 	// Transaction: update header, hapus detail lama, insert detail baru
 	tx := h.DB.Begin()
@@ -160,7 +158,10 @@ func (h *PenjualanHandler) UpdatePenjualan(c *gin.Context) {
 	tx.Commit()
 
 	// Setelah berhasil, kembalikan response kosong
-	c.JSON(http.StatusOK, gin.H{"success": true, "reset": true})
+	// tambahkan field lain jika ada
+	penjualan.TaxAmount1 = req.TaxAmount1
+	penjualan.TaxAmount2 = req.TaxAmount2
+	penjualan.TaxAmount3 = req.TaxAmount3
 }
 
 // Delete Penjualan

@@ -91,6 +91,8 @@ func UpdateMasterMataUang(db *gorm.DB) gin.HandlerFunc {
 		mataUang.KeuntunganBelumDirealisasi = updateData.KeuntunganBelumDirealisasi
 		mataUang.HutangJatuhTempo = updateData.HutangJatuhTempo
 		mataUang.PiutangJatuhTempo = updateData.PiutangJatuhTempo
+		mataUang.BiayaLainLain = updateData.BiayaLainLain
+		mataUang.BiayaMaterai = updateData.BiayaMaterai
 
 		if err := db.Save(&mataUang).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal mengupdate mata uang"})

@@ -14,6 +14,7 @@ type MasterPajak struct {
 	Description        string         `json:"description"`
 	SalesTaxAccount    string         `json:"sales_tax_account"`
 	PurchaseTaxAccount string         `json:"purchase_tax_account"`
+	Order              int            `json:"order" gorm:"column:order"`
 	CreatedAt          time.Time      `json:"created_at"`
 	UpdatedAt          time.Time      `json:"updated_at"`
 	DeletedAt          gorm.DeletedAt `json:"deleted_at" gorm:"index"`

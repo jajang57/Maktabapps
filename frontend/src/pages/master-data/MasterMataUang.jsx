@@ -27,6 +27,8 @@ export default function MasterMataUang() {
     akunGL1: "",
     akunGL2: "",
     akunGL3: "",
+    BiayaLainLain: "",
+    BiayaMaterai: "",
   });
 
   const [activeTab, setActiveTab] = useState("Umum");
@@ -71,6 +73,8 @@ export default function MasterMataUang() {
       KeuntunganBelumDirealisasi: glAccount.KeuntunganBelumDirealisasi || "",
       HutangJatuhTempo: glAccount.HutangJatuhTempo || "",
       PiutangJatuhTempo: glAccount.PiutangJatuhTempo || "",
+      BiayaLainLain: glAccount.BiayaLainLain || "",
+      BiayaMaterai: glAccount.BiayaMaterai || "",
     };
 
     if (editId) {
@@ -313,6 +317,8 @@ export default function MasterMataUang() {
                   { key: "KeuntunganBelumDirealisasi", label: "Keuntungan Belum Direalisasi" },
                   { key: "HutangJatuhTempo", label: "Hutang Jatuh Tempo" },
                   { key: "PiutangJatuhTempo", label: "Piutang Jatuh Tempo" },
+                  { key: "BiayaLainLain", label: "Biaya Lain-lain" },
+                  { key: "BiayaMaterai", label: "Biaya Materai" },
                 ].map((field) => (
                   <div key={field.key}>
                     <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>

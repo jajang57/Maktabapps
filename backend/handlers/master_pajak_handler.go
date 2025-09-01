@@ -99,6 +99,7 @@ func UpdateMasterPajak(db *gorm.DB) gin.HandlerFunc {
 		pajak.Description = input.Description
 		pajak.SalesTaxAccount = input.SalesTaxAccount
 		pajak.PurchaseTaxAccount = input.PurchaseTaxAccount
+		pajak.Order = input.Order
 		if err := db.Save(&pajak).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "Gagal memperbarui data pajak"})
 			return
