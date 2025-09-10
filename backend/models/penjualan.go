@@ -54,6 +54,8 @@ type PenjualanDetail struct {
 	TaxAmount1     float64        `json:"taxamount1"`
 	TaxAmount2     float64        `json:"taxamount2"`
 	TaxAmount3     float64        `json:"taxamount3"`
+	Dpp            float64        `json:"dpp"`
+	Amount         float64        `json:"amount"`
 }
 
 func (PenjualanDetail) TableName() string {

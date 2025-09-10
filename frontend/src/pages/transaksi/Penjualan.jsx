@@ -14,6 +14,40 @@ import {
 
 export default function Penjualan() {
   const { theme } = useTheme();
+  const [editingQty, setEditingQty] = useState({});
+  const [editingPrice, setEditingPrice] = useState({});
+  const [editingDiscPercent, setEditingDiscPercent] = useState({});
+  const [editingDiscAmountItem, setEditingDiscAmountItem] = useState({});
+
+  // column resize state & handlers
+  const [columnWidths, setColumnWidths] = useState({
+    kodeItem: 100, namaItem: 220, qty: 80, unit: 80, price: 100, tax: 220, discAmount: 100, dpp: 120, total: 100, aksi: 80
+  });
+  const resizingRef = React.useRef(null);
+
+  const onMouseMove = (e) => {
+    const r = resizingRef.current;
+    if (!r) return;
+    const delta = e.clientX - r.startX;
+    setColumnWidths(prev => ({ ...prev, [r.key]: Math.max(40, r.startWidth + delta) }));
+  };
+  const onMouseUp = () => {
+    resizingRef.current = null;
+    document.removeEventListener('mousemove', onMouseMove);
+    document.removeEventListener('mouseup', onMouseUp);
+  };
+  const startResize = (key, e) => {
+    e.preventDefault();
+    resizingRef.current = { key, startX: e.clientX, startWidth: columnWidths[key] || 100 };
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  };
+  React.useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
 
   // Tambahkan state master
   const [masterPembeli, setMasterPembeli] = useState([]);
@@ -45,6 +79,7 @@ export default function Penjualan() {
   const [showModal, setShowModal] = useState(false);
   const [selectedModalItems, setSelectedModalItems] = useState([]);
   const [modalFilter, setModalFilter] = useState("");
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     fetchMasterBarangJasa();
@@ -120,57 +155,132 @@ useEffect(() => {
     }));
   };
 
-  const handleItemChange = (index, field, value) => {
-    const newItems = [...items];
-    newItems[index][field] = value;
-
-    // Auto calculate
-    if (['qty', 'price', 'discPercent', 'discAmountItem', 'tax'].includes(field)) {
-      const item = newItems[index];
-      const subtotal = item.qty * item.price;
-      const discAmountItem = item.discAmountItem || 0;
-      const discAmount = (subtotal * item.discPercent) / 100 + discAmountItem;
-      const afterDisc = subtotal - discAmount;
-      item.discAmount = discAmount;
-
-      // Reset taxamount
-      item.taxamount1 = 0;
-      item.taxamount2 = 0;
-      item.taxamount3 = 0;
-      // Hitung taxamount berdasarkan pajak yang dipilih
-      if (Array.isArray(item.tax)) {
-        item.tax.forEach(code => {
-          const pajak = masterPajak.find(p => p.code === code);
-          if (pajak) {
-            const pajakAmount = afterDisc * pajak.rate_percent / 100;
-            if (pajak.order === 1) item.taxamount1 += pajakAmount;
-            if (pajak.order === 2) item.taxamount2 += pajakAmount;
-            if (pajak.order === 3) item.taxamount3 += pajakAmount;
-          }
-        });
-      }
-      item.amount = afterDisc + item.taxamount1 + item.taxamount2 + item.taxamount3;
+  const parseDppFormula = (s) => {
+   if (s === undefined || s === null) return 1;
+   const str = String(s).trim();
+       if (str.includes('/')) {
+      const parts = str.split('/');
+      const a = parseFloat(parts[0].replace(',', '.'));
+      const b = parseFloat(parts[1].replace(',', '.'));
+      if (!isNaN(a) && !isNaN(b) && b !== 0) return a / b;
+      return 1;
     }
-    setItems(newItems);
+    const n = parseFloat(str.replace(',', '.'));
+    return isNaN(n) ? 1 : n;
   };
 
-  // Saat menambah item baru
+ const handleItemChange = (index, field, value) => {
+  const newItems = [...items];
+  // clone item
+  const item = { ...(newItems[index] || {}) };
+  // simpan raw value
+  item[field] = value;
+
+  // parse numeric fields safely (toleran terhadap string dengan koma)
+  const parseNum = v => {
+    if (v === "" || v === null || v === undefined) return 0;
+    const s = String(v).trim().replace(/,/g, '.');
+    const n = parseFloat(s);
+    return Number.isFinite(n) ? n : 0;
+  };
+
+  const qty = parseNum(item.qty);
+  const price = parseNum(item.price);
+  // treat stored discPercent / discAmountItem as numbers or empty string
+  let discPercent = item.discPercent === "" ? 0 : parseNum(item.discPercent);
+  let discAmountItem = item.discAmountItem === "" ? 0 : parseNum(item.discAmountItem);
+
+  // jika user mengubah discPercent => hitung discAmountItem (per unit)
+  if (field === 'discPercent') {
+    if (price > 0 && discPercent > 0) {
+      discAmountItem = (price * discPercent) / 100;
+    } else {
+      discAmountItem = 0;
+    }
+  }
+
+  // jika user mengubah discAmountItem => hitung discPercent (per unit)
+  if (field === 'discAmountItem') {
+    if (price > 0 && discAmountItem > 0) {
+      discPercent = (discAmountItem / price) * 100;
+    } else {
+      discPercent = 0;
+    }
+  }
+
+  // total discount amount (for line) = per-unit discount * qty
+  const discAmount = discAmountItem * qty;
+  const subtotal = qty * price;
+  const afterDisc = subtotal - discAmount;
+
+  // assign back (normalisasi ke number / empty-string as appropriate)
+  item.discPercent = discPercent;
+  item.discAmountItem = Number(Number(discAmountItem || 0).toFixed(2));
+  item.discAmount = Number(Number(discAmount || 0).toFixed(2));
+
+  // reset tax amounts then compute using masterPajak + parseDppFormula
+  item.taxamount1 = 0;
+  item.taxamount2 = 0;
+  item.taxamount3 = 0;
+  item.dppDetails = [];
+
+  // hitung tiap pajak dengan tanda sesuai jenis (PPN = positive, PPH/PPH Final = negative untuk total)
+  let taxSum = 0;
+  if (Array.isArray(item.tax)) {
+    item.tax.forEach(code => {
+      const pajak = masterPajak.find(p => p.code === code);
+      if (!pajak) return;
+      const dppFactor = parseDppFormula(pajak.dpp_formula);
+      const baseForTax = dppFactor * afterDisc;
+      const rate = parseNum(pajak.rate_percent) || 0;
+      const amt = (baseForTax * rate) / 100;
+      const isPph = String(pajak.tax_type || '').toLowerCase().includes('pph');
+
+      // Simpan taxamount sebagai nilai positif untuk tampilan
+      if (pajak.order === 1) item.taxamount1 += amt;
+      if (pajak.order === 2) item.taxamount2 += amt;
+      if (pajak.order === 3) item.taxamount3 += amt;
+
+      // Namun kontribusi terhadap total line berkurang kalau ini PPH
+      taxSum += isPph ? -amt : amt;
+
+      item.dppDetails.push({
+        code: pajak.code,
+        tax_type: pajak.tax_type,
+        base: Number(Number(baseForTax || 0).toFixed(2)),
+        rate_percent: rate,
+        amount: Number(Number(amt || 0).toFixed(2)) // simpan positif
+      });
+    });
+  }
+
+  // amount = after discount + total signed taxes (PPH mengurangi amount)
+  item.amount = Number((afterDisc + taxSum).toFixed(2));
+  item.dpp = Number(Number(afterDisc || 0).toFixed(2));
+  // write back and update state
+  newItems[index] = item;
+  setItems(newItems);
+};
+
+  // Tambahkan item baru dengan id unik
   const addNewItem = () => {
     setItems([...items, {
-      id: items.length + 1,
+      id: Date.now() + Math.random(),
       kodeItem: '',
       namaItem: '',
       qty: 0,
       unit: '',
-      price: 0,
-      discPercent: 0,
-      discAmountItem: 0,
+      price: "",           // <-- harus string kosong
+      discPercent: "",     // <-- harus string kosong
+      discAmountItem: "",  // <-- harus string kosong
       discAmount: 0,
-      tax: [], // array of pajak id
+      tax: [],
       taxamount1: 0,
       taxamount2: 0,
       taxamount3: 0,
-      amount: 0
+      dpp: 0,
+      amount: 0,
+      gudang: ''
     }]);
   };
 
@@ -190,81 +300,127 @@ useEffect(() => {
   const calculateTotal = () => items.reduce((total, item) => total + (item.amount || 0), 0);
 
   const handleSave = async () => {
-    // Hitung summary taxamount1,2,3
-    const summaryTaxamount1 = items.reduce((sum, item) => sum + (item.taxamount1 || 0), 0);
-    const summaryTaxamount2 = items.reduce((sum, item) => sum + (item.taxamount2 || 0), 0);
-    const summaryTaxamount3 = items.reduce((sum, item) => sum + (item.taxamount3 || 0), 0);
+    if (saving) return;
+    setSaving(true);
+    
+    // ✅ SIMPEL: Filter item valid tanpa deduplikasi
+    const raw = Array.isArray(items) ? items : [];
+    const filtered = raw.filter(d => 
+      d && 
+      String(d.kodeItem).trim() !== "" && 
+      Number(d.qty) > 0
+    );
+
+    // ✅ LANGSUNG MAP KE FORMAT BACKEND TANPA DEDUPE
+    const cleanedDetails = filtered.map(d => ({
+      kodeItem: String(d.kodeItem).trim(),
+      namaItem: d.namaItem || '',
+      qty: Number(d.qty || 0),
+      unit: d.unit || '',
+      price: Number(d.price || 0),
+      discPercent: Number(d.discPercent || 0),
+      discAmountItem: Number(d.discAmountItem || 0),
+      discAmount: Number(d.discAmount || 0),
+      tax: Array.isArray(d.tax) ? d.tax.map(String) : [],
+      taxamount1: Number(d.taxamount1 || 0),
+      taxamount2: Number(d.taxamount2 || 0),
+      taxamount3: Number(d.taxamount3 || 0),
+      dpp: Number(d.dpp || 0),
+      amount: Number(d.amount || 0),
+      gudang: String(d.gudang || '')
+    }));
+
+    // compute summary taxes dari semua details (tanpa dedupe)
+    const summaryTaxamount1 = cleanedDetails.reduce((s, it) => s + (it.taxamount1 || 0), 0);
+    const summaryTaxamount2 = cleanedDetails.reduce((s, it) => s + (it.taxamount2 || 0), 0);
+    const summaryTaxamount3 = cleanedDetails.reduce((s, it) => s + (it.taxamount3 || 0), 0);
+
+    const invoiceData = {
+      nomorInvoice: formData.nomorInvoice,
+      tanggal: formData.tanggal,
+      dueDate: formData.dueDate,
+      customerId: formData.customer ? Number(formData.customer) : null,
+      gudangId: Number(formData.gudang || 0),
+      departementId: Number(formData.departement || 0),
+      nomorEfaktur: formData.nomorEfaktur,
+      notes: formData.notes,
+      subtotal: calculateSubtotal(),
+      ppn: 0,
+      freight: parseFloat(formData.freight) || 0,
+      stamp: parseFloat(formData.stamp) || 0,
+      total: cleanedDetails.reduce((s, it) => s + (it.amount || 0), 0) + 
+             (parseFloat(formData.freight) || 0) + 
+             (parseFloat(formData.stamp) || 0),
+      taxamount1: summaryTaxamount1,
+      taxamount2: summaryTaxamount2,
+      taxamount3: summaryTaxamount3,
+      status: 'draft',
+      details: cleanedDetails // ✅ Kirim semua item tanpa dedupe
+    };
 
     try {
-      const invoiceData = {
-        nomorInvoice: formData.nomorInvoice,
-        tanggal: formData.tanggal,
-        dueDate: formData.dueDate,
-        customerId: formData.customer ? Number(formData.customer) : null,
-        gudangId: Number(formData.gudang),
-        departementId: Number(formData.departement),
-        nomorEfaktur: formData.nomorEfaktur,
-        notes: formData.notes,
-        subtotal: calculateSubtotal(),
-        ppn: 0,
-        freight: parseFloat(formData.freight) || 0,
-        stamp: parseFloat(formData.stamp) || 0,
-        total: calculateTotal() + (parseFloat(formData.freight) || 0) + (parseFloat(formData.stamp) || 0),
-        taxamount1: summaryTaxamount1,
-        taxamount2: summaryTaxamount2,
-        taxamount3: summaryTaxamount3,
-        status: 'draft',
-        details: items.map(item => ({
-          kodeItem: item.kodeItem,
-          namaItem: item.namaItem,
-          qty: item.qty,
-          unit: item.unit,
-          price: item.price,
-          discPercent: item.discPercent,
-          discAmountItem: item.discAmountItem,
-          discAmount: item.discAmount,
-          tax: item.tax,
-          taxamount1: item.taxamount1,
-          taxamount2: item.taxamount2,
-          taxamount3: item.taxamount3,
-          amount: item.amount,
-          gudang: item.gudang
-        }))
-      };
-
       const url = editMode ? `/penjualan/${editId}` : '/penjualan';
       const method = editMode ? 'put' : 'post';
       const response = await api[method](url, invoiceData);
-
+      
       if (response.status === 200 || response.status === 201 || response.data?.success) {
         alert(editMode ? 'Data berhasil diupdate!' : 'Data berhasil disimpan!');
-        setEditMode(false);
-        setEditId(null);
-        // Reset form
-        setFormData({
-          nomorInvoice: '',
-          tanggal: new Date().toISOString().split('T')[0],
-          customer: '',
-          alamat: '',
-          noTelp: '',
-          termPembayaran: '',
-          jatuhTempo: '',
-          keterangan: '',
-          gudang: '',
-          departement: '',
-          dueDate: '',
-          nomorEfaktur: '',
-          notes: '',
-          freight: 0,
-          stamp: 0
-        });
-        setItems([]); // detail barang/jasa default kosong
-        generateNomorInvoice();
+        
+        // ✅ REFRESH UI DENGAN DATA DARI BACKEND
+        if (editMode && response.data?.data) {
+          const freshData = response.data.data;
+          const freshDetails = Array.isArray(freshData.Details) ? freshData.Details : [];
+          
+          console.log('Refreshing UI with fresh data:', freshDetails.length, 'items');
+          setItems(freshDetails.map(detail => ({
+            id: detail.ID || Date.now() + Math.random(),
+            kodeItem: detail.KodeItem || '',
+            namaItem: detail.NamaItem || '',
+            qty: Number(detail.Qty || 0),
+            unit: detail.Unit || '',
+            price: Number(detail.Price || 0),
+            discPercent: Number(detail.DiscPercent || 0),
+            discAmountItem: Number(detail.DiscAmountItem || 0),
+            discAmount: Number(detail.DiscAmount || 0),
+            tax: Array.isArray(detail.Tax) ? detail.Tax : [],
+            taxamount1: Number(detail.TaxAmount1 || 0),
+            taxamount2: Number(detail.TaxAmount2 || 0),
+            taxamount3: Number(detail.TaxAmount3 || 0),
+            dpp: Number(detail.Dpp || 0),
+            amount: Number(detail.Amount || 0),
+            gudang: String(detail.GudangID || formData.gudang || '')
+          })));
+        } else {
+          // Reset form untuk mode create
+          setEditMode(false);
+          setEditId(null);
+          setFormData({
+            nomorInvoice: '',
+            tanggal: new Date().toISOString().split('T')[0],
+            dueDate: '',
+            customer: '',
+            gudang: '',
+            termPembayaran: '',
+            departement: '',
+            nomorEfaktur: '',
+            notes: '',
+            freight: 0,
+            stamp: 0
+          });
+          setItems([]);
+          generateNomorInvoice();
+        }
+        
         fetchListPenjualan();
+      } else {
+        console.error('save failed', response);
+        alert('Gagal menyimpan invoice!');
       }
-    } catch (error) {
-      console.error('Error saving invoice:', error);
+    } catch (err) {
+      console.error('Error saving invoice:', err);
       alert('Gagal menyimpan invoice!');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -337,8 +493,8 @@ useEffect(() => {
       stamp: trx.stamp || 0,
       // tambahkan field lain jika ada
     });
-    setItems(trx.details?.map((item, idx) => ({
-      id: idx + 1,
+    setItems(trx.details?.map((item) => ({
+      id: item.id, // gunakan id dari backend jika ada, jika tidak buat baru
       kodeItem: item.kodeItem,
       namaItem: item.namaItem,
       qty: item.qty,
@@ -348,8 +504,12 @@ useEffect(() => {
       discAmountItem: item.discAmountItem,
       discAmount: item.discAmount,
       tax: item.tax,
+      taxamount1: item.taxamount1,
+      taxamount2: item.taxamount2,
+      taxamount3: item.taxamount3,
+      dpp: item.dpp,
       amount: item.amount,
-      gudang: String(item.gudangId || item.gudang) // pastikan id gudang masuk, fallback ke item.gudang jika ada
+      gudang: String(item.gudangId || item.gudang)
     })) || []);
   };
 
@@ -371,6 +531,14 @@ useEffect(() => {
   };
 
   const columns = [
+      {
+    accessorKey: 'id',
+    header: 'ID',
+    cell: info => (
+      <span className="text-xs">{info.row.original.id}</span>
+    ),
+    size: 80,
+  },
     {
       accessorKey: 'kodeItem',
       header: 'Kode Item',
@@ -409,7 +577,7 @@ useEffect(() => {
           ))}
         </select>
       ),
-      size: 70,
+      size: columnWidths.kodeItem,
     },
     {
       accessorKey: 'namaItem',
@@ -425,23 +593,50 @@ useEffect(() => {
           onBlur={e => Object.assign(e.target.style, { borderColor: theme.cardBorderColor })}
         />
       ),
-      size: 200,
+      size: columnWidths.namaItem,
     },
-    {
-      accessorKey: 'qty',
-      header: 'Qty',
-      cell: info => (
-        <input
-          type="number"
-          value={info.row.original.qty}
-          onChange={e => handleItemChange(info.row.index, 'qty', parseFloat(e.target.value) || 0)}
-          className="w-full text-xs border rounded text-right"
-          style={inputStyle(theme)}
-          min="0"
-        />
-      ),
-      size: 40,
-    },
+{
+  accessorKey: 'qty',
+  header: 'Qty',
+  cell: info => {
+    const row = info.row.original;
+    return (
+      <input
+        type="text"
+        name="qty"
+        value={
+          editingQty[row.id] !== undefined
+            ? editingQty[row.id]
+            : (row.qty === "" || row.qty === 0)
+              ? ""
+              : Number(row.qty).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+        }
+        onChange={e => {
+          // accept digits + decimal separator (comma or dot), normalize to dot for storage
+          let val = e.target.value.replace(/[^0-9.,]/g, "");
+          val = val.replace(/,/g, ".");
+          setEditingQty(prev => ({ ...prev, [row.id]: val }));
+        }}
+        onBlur={() => {
+          const raw = editingQty[row.id] !== undefined ? editingQty[row.id] : String(row.qty || "");
+          const num = raw === "" ? 0 : parseFloat(raw.replace(/,/g, "."));
+          // store as number with 2 decimals
+          handleItemChange(info.row.index, 'qty', Number(Number(num || 0).toFixed(2)));
+          setEditingQty(prev => {
+            const newState = { ...prev };
+            delete newState[row.id];
+            return newState;
+          });
+        }}
+        className="w-full text-xs border rounded text-right"
+        style={inputStyle(theme)}
+        inputMode="decimal"
+        autoComplete="off"
+      />
+    );
+  },
+  size: columnWidths.qty,
+},
     {
       accessorKey: 'unit',
       header: 'Item Unit',
@@ -454,57 +649,101 @@ useEffect(() => {
           style={inputStyle(theme)}
         />
       ),
-      size: 60,
+      size: columnWidths.unit,
     },
     {
       accessorKey: 'price',
       header: 'Price',
-      cell: info => (
-        <input
-          type="text"
-          value={info.row.original.price?.toLocaleString('id-ID')}
-          onChange={e => {
-            // Hapus titik, ubah ke angka
-            const val = e.target.value.replace(/\./g, '').replace(/[^0-9]/g, '');
-            handleItemChange(info.row.index, 'price', parseFloat(val) || 0);
-          }}
-          className="w-full text-xs border rounded text-right"
-          style={inputStyle(theme)}
-          min="0"
-          inputMode="numeric"
-          pattern="[0-9]*"
-        />
-      ),
-      size: 70,
+      cell: info => {
+        const row = info.row.original;
+        return (
+          <input
+            type="text"
+            inputMode="decimal"
+            value={
+              editingPrice[row.id] !== undefined
+                ? editingPrice[row.id]
+                : (item.price === "" || item.price === 0) ? "" : Number(item.price).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+            }
+            onFocus={() => {
+              if (editingPrice[row.id] === undefined) setEditingPrice(prev => ({ ...prev, [row.id]: item.price === 0 ? "" : String(item.price) }));
+            }}
+            onChange={e => {
+              let val = e.target.value.replace(/[^0-9.,]/g, "");
+              val = val.replace(/,/g, ".");
+              setEditingPrice(prev => ({ ...prev, [row.id]: val }));
+            }}
+            onBlur={() => {
+              const raw = editingPrice[row.id] !== undefined ? editingPrice[row.id] : String(item.price || "");
+              const num = raw === "" ? 0 : parseFloat(String(raw).replace(/,/g, "."));
+              setItems(prev => {
+                const copy = [...prev];
+                copy[row.id] = { ...copy[row.id], price: Number(Number(num || 0).toFixed(2)) };
+                return copy;
+              });
+              handleItemChange(info.row.index, 'price', Number(Number(num || 0).toFixed(2)));
+              setEditingPrice(prev => { const c = { ...prev }; delete c[row.id]; return c; });
+            }}
+            className="w-full text-xs border rounded text-right"
+            style={inputStyle(theme)}
+            min="0"
+          />
+        );
+      },
+      size: columnWidths.price,
     },
     {
       accessorKey: 'discPercent',
       header: 'Discount %',
-      cell: info => (
-        <input
-          type="number"
-          value={info.row.original.discPercent}
-          onChange={e => handleItemChange(info.row.index, 'discPercent', parseFloat(e.target.value) || 0)}
-          className="w-full text-xs border rounded text-right"
-          style={inputStyle(theme)}
-          min="0"
-          max="100"
-        />
-      ),
+      cell: info => {
+        const row = info.row.original;
+        return (
+          <input
+            type="text"
+            inputMode="numeric"
+            value={
+              editingDiscPercent[row.id] !== undefined
+                ? editingDiscPercent[row.id]
+                : (row.discPercent === "" ? "" : String(row.discPercent))
+            }
+            onFocus={() => {
+              if (editingDiscPercent[row.id] === undefined) {
+                setEditingDiscPercent(prev => ({ ...prev, [row.id]: row.discPercent === 0 ? "" : String(row.discPercent) }));
+              }
+            }}
+            onChange={e => {
+              const v = e.target.value.replace(/[^0-9]/g, "");
+              setEditingDiscPercent(prev => ({ ...prev, [row.id]: v }));
+            }}
+            onBlur={() => {
+              const raw = editingDiscPercent[row.id] !== undefined ? editingDiscPercent[row.id] : String(row.discPercent || "");
+              const num = raw === "" ? "" : Number(raw);
+              // update via handleItemChange so recalculation happens
+              handleItemChange(info.row.index, 'discPercent', num);
+              // also update local items state to keep UI in sync
+              setItems(prev => {
+                const copy = [...prev];
+                copy[row.id] = { ...copy[row.id], discPercent: num === "" ? "" : Number(num) };
+                return copy;
+              });
+              setEditingDiscPercent(prev => { const c = { ...prev }; delete c[row.id]; return c; });
+            }}
+            className="w-full text-xs border rounded text-right"
+            style={inputStyle(theme)}
+            min="0"
+            max="100"
+          />
+        );
+      },
       size: 60,
     },
     {
       accessorKey: 'discAmountItem',
       header: 'Discount Amount Item',
       cell: info => (
-        <input
-          type="number"
-          value={info.row.original.discAmountItem}
-          onChange={e => handleItemChange(info.row.index, 'discAmountItem', parseFloat(e.target.value) || 0)}
-          className="w-full text-xs border rounded text-right"
-          style={inputStyle(theme)}
-          min="0"
-        />
+        <span className="text-xs font-semibold" style={{ textAlign: 'right', display: 'block', width: '100%' }}>
+          {info.row.original.discAmountItem?.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
       ),
       size: 100,
     },
@@ -512,13 +751,15 @@ useEffect(() => {
       accessorKey: 'discAmount',
       header: 'Discount Amount',
       cell: info => (
-        <span className="text-xs">{info.row.original.discAmount?.toLocaleString('id-ID')}</span>
+        <span className="text-xs font-semibold" style={{ textAlign: 'right', display: 'block', width: '100%' }}>
+          {(Number(info.row.original.discAmount || 0)).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+        </span>
       ),
-      size: 80,
+      size: columnWidths.discAmount,
     },
     {
       accessorKey: 'tax',
-      header: 'Tax',
+      header: 'Pajak',
       cell: info => (
         <Select
           isMulti
@@ -529,111 +770,16 @@ useEffect(() => {
           }))}
           value={Array.isArray(info.row.original.tax) ? info.row.original.tax.map(code => ({ value: code, label: code })) : []}
           onChange={selected => {
-            handleItemChange(info.row.index, 'tax', selected.map(opt => opt.value));
+            const vals = Array.isArray(selected) ? selected.map(s => s.value) : [];
+            // gunakan handleItemChange agar kalkulasi diskon/pajak/amount dilakukan
+            handleItemChange(idx, 'tax', vals);
           }}
-          menuPortalTarget={document.body} // <-- Tambahkan ini
-          styles={{
-            control: (base) => ({
-              ...base,
-              minHeight: 20,
-              height: 22,
-              fontSize: 12,
-              background: theme.fieldColor,
-              color: theme.fontColor,
-              fontFamily: theme.fontFamily,
-              borderColor: theme.dropdownColor,
-              boxShadow: 'none',
-              borderRadius: 0,
-              padding: '0 2px',
-              width: 120,
-              maxWidth: 140,
-              display: 'flex',
-              alignItems: 'center',
-            }),
-            multiValue: (base) => ({
-              ...base,
-              background: theme.fieldColor,
-              color: theme.fontColor,
-              fontFamily: theme.fontFamily,
-              fontSize: 11,
-              margin: '1px 2px',
-              borderRadius: 0,
-              maxWidth: 80,
-              height: 16,
-              display: 'flex',
-              alignItems: 'center',
-            }),
-            multiValueLabel: (base) => ({
-              ...base,
-              color: theme.fontColor,
-              fontWeight: 600,
-              padding: '0 0px',
-            }),
-            valueContainer: (base) => ({
-              ...base,
-              padding: '0 2px',
-              maxWidth: 110,
-              display: 'flex',
-              alignItems: 'center',
-            }),
-            indicatorsContainer: (base) => ({
-              ...base,
-              padding: '0 2px',
-              height: 16,
-              display: 'flex',
-              alignItems: 'center',
-            }),
-            clearIndicator: (base) => ({
-              ...base,
-              padding: 0,
-              margin: '0 2px',
-              fontSize: 12,
-              width: 16,
-              height: 16,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: theme.fontColor,
-            }),
-            dropdownIndicator: (base) => ({
-              ...base,
-              padding: 0,
-              margin: '0 2px',
-              fontSize: 12,
-              width: 16,
-              height: 16,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: theme.fontColor,
-            }),
-            menu: (base) => ({
-              ...base,
-              fontSize: 12,
-              maxWidth: 160,
-              background: theme.fieldColor,
-              color: theme.fontColor,
-              zIndex: 9999, // pastikan di atas
-            }),
-            menuPortal: (base) => ({
-              ...base,
-              zIndex: 9999, // pastikan di atas modal/table
-            }),
-            placeholder: (base) => ({
-              ...base,
-              fontSize: 11,
-              color: theme.fontColor,
-            }),
-            input: (base) => ({
-              ...base,
-              fontSize: 12,
-              color: theme.fontColor,
-            }),
-          }}
+          menuPortalTarget={document.body}
+          styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
           placeholder="Kode Pajak"
         />
       ),
-      size: 100,
+      size: columnWidths.tax,
     },
     {
       accessorKey: 'gudang',
@@ -713,6 +859,21 @@ useEffect(() => {
       size: 70,
     },
     {
+      accessorKey: 'dpp',
+      header: 'DPP',
+      cell: info => {
+        const it = info.row.original || {};
+        const subtotal = (Number(it.qty) || 0) * (Number(it.price) || 0);
+        const dpp = subtotal - (Number(it.discAmount) || 0);
+        return (
+          <span className="text-xs font-semibold" style={{ textAlign: 'right', display: 'block', width: '100%' }}>
+            {dpp.toLocaleString('id-ID')}
+          </span>
+        );
+      },
+      size: columnWidths.dpp,
+    },
+    {
       id: 'action',
       header: 'Action',
       cell: info => (
@@ -738,7 +899,7 @@ useEffect(() => {
           &#10005; {/* Unicode X */}
         </button>
       ),
-      size: 30,
+      size: columnWidths.aksi,
     }
   ];
 
@@ -787,6 +948,29 @@ useEffect(() => {
     background: '#eaf3ff',
   };
 
+  useEffect(() => {
+    if (items.length === 0) {
+      setItems([{
+        id: Date.now() + Math.random(),
+        kodeItem: '',
+        namaItem: '',
+        qty: 0,
+        unit: '',
+        price: "",           // <-- harus string kosong
+        discPercent: "",     // <-- harus string kosong
+        discAmountItem: "",  // <-- harus string kosong
+        discAmount: 0,
+        tax: [],
+        taxamount1: 0,
+        taxamount2: 0,
+        taxamount3: 0,
+        dpp: 0,
+        amount: 0,
+        gudang: ''
+      }]);
+    }
+  }, [showForm]);
+
   return (
     <div className="p-6 min-h-screen" style={{ background: theme.backgroundColor, color: theme.fontColor, fontFamily: theme.fontFamily }}>
       <h1 className="text-2xl font-bold mb-6">Penjualan - AR Invoice</h1>
@@ -819,7 +1003,7 @@ useEffect(() => {
                   stamp: 0
                 });
                 setItems([{
-                  id: 1,
+                  id: Date.now() + Math.random(),
                   kodeItem: '',
                   namaItem: '',
                   qty: 0,
@@ -948,86 +1132,316 @@ useEffect(() => {
                   + Tambah Item
                 </Button>
               </div>
+
+              {/* simplified table: avoid re-mount issues from react-table while editing */}
               <div className="overflow-x-auto max-w-full rounded-lg border min-w-max" style={{ borderColor: theme.cardBorderColor }}>
                 <table className="w-full border-collapse whitespace-nowrap text-xs" style={{ fontFamily: theme.tableFontFamily }}>
                   <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
-                    {table.getHeaderGroups().map(headerGroup => (
-                      <tr key={headerGroup.id}>
-                        {headerGroup.headers.map(header => (
-                          <th
-                            key={header.id}
-                            style={{
-                              borderColor: theme.cardBorderColor,
-                              fontSize: '0.95em',
-                              width: header.getSize(),
-                              minWidth: header.getSize(),
-                              maxWidth: header.getSize(),
-                              position: 'relative',
-                              padding: '6px 4px',
-                              borderRadius: '6px 6px 0 0'
-                            }}
-                            className="text-center font-bold border"
-                          >
-                            {flexRender(header.column.columnDef.header, header.getContext())}
-                            {header.column.getCanResize() && (
-                              <div
-                                onMouseDown={header.getResizeHandler()}
-                                style={{
-                                  position: 'absolute',
-                                  right: 0,
-                                  top: 0,
-                                  height: '100%',
-                                  width: '5px',
-                                  cursor: 'col-resize',
-                                  userSelect: 'none'
-                                }}
-                              />
-                            )}
-                          </th>
-                        ))}
-                      </tr>
-                    ))}
+                    <tr>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: columnWidths.kodeItem }}>Kode Item
+                        <div onMouseDown={e => startResize('kodeItem', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: columnWidths.namaItem }}>Nama Item
+                        <div onMouseDown={e => startResize('namaItem', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: columnWidths.qty }}>Qty
+                        <div onMouseDown={e => startResize('qty', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: columnWidths.unit }}>Item Unit
+                        <div onMouseDown={e => startResize('unit', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: columnWidths.price }}>Price
+                        <div onMouseDown={e => startResize('price', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: 60 }}>Discount %
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: 120 }}>Discount Amount Item
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: 120 }}>Discount Amount
+                         <div onMouseDown={e => startResize('discAmount', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: columnWidths.tax }}>Pajak
+                        <div onMouseDown={e => startResize('tax', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: 100 }}>Gudang
+                      </th>
+                      <th className="border px-2 py-1 text-right" style={{ position: 'relative', width: 90 }}>Tax Amount 1
+                      </th>
+                      <th className="border px-2 py-1 text-right" style={{ position: 'relative', width: 90 }}>Tax Amount 2
+                      </th>
+                      <th className="border px-2 py-1 text-right" style={{ position: 'relative', width: 90 }}>Tax Amount 3
+                      </th>
+                      <th className="border px-2 py-1 text-right" style={{ position: 'relative', width: columnWidths.dpp }}>
+                        DPP
+                        <div onMouseDown={e => startResize('dpp', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1 text-right" style={{ position: 'relative', width: columnWidths.total }}>
+                        Total
+                        <div onMouseDown={e => startResize('total', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                      <th className="border px-2 py-1" style={{ position: 'relative', width: columnWidths.aksi }}>Action
+                        <div onMouseDown={e => startResize('aksi', e)} style={{ position: 'absolute', right: 0, top: 0, height: '100%', width: 6, cursor: 'col-resize' }} />
+                      </th>
+                    </tr>
                   </thead>
                   <tbody>
-                    {table.getRowModel().rows.map(row => (
-                      <tr key={row.id} style={{
-                        background: row.index % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor,
-                        color: theme.tableFontColor,
-                        borderRadius: 6
-                      }}>
-                        {row.getVisibleCells().map(cell => (
-                          <td
-                            key={cell.id}
-                            className="align-middle border"
-                            style={{
-                              borderColor: theme.cardBorderColor,
-                              minWidth: cell.column.getSize(),
-                              maxWidth: cell.column.getSize(),
-                              width: cell.column.getSize(),
-                              padding: '0px 2px',
-                              background: row.index % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor, // <-- GANTI DI SINI
-                              borderRadius: 0,
-                              verticalAlign: 'middle',
-                              height: 28
+                    {items.map((item, idx) => (
+                      <tr key={item.id} style={{ background: idx % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor, color: theme.tableFontColor }}>
+                        <td className="border px-2 py-1" style={{ width: columnWidths.kodeItem }}>
+                          <select
+                            value={item.kodeItem || ''}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const selected = masterBarangJasa.find(m => m.kode === val);
+                              setItems(prev => {
+                                const copy = [...prev];
+                                copy[idx] = {
+                                  ...copy[idx],
+                                  kodeItem: val,
+                                  namaItem: selected ? selected.nama : copy[idx].namaItem,
+                                  unit: selected ? selected.satuan : copy[idx].unit,
+                                  price: selected ? selected.hargaJual : copy[idx].price
+                                };
+                                return copy;
+                              });
                             }}
+                            className="w-full"
+                            style={inputStyle(theme)}
                           >
-                            {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                          </td>
-                        ))}
+                            <option value="">Pilih Kode</option>
+                            {masterBarangJasa.map(m => <option key={m.id} value={m.kode}>{m.kode}</option>)}
+                          </select>
+                        </td>
+
+                        <td className="border px-2 py-1" style={{ width: columnWidths.namaItem }}>
+                          <input
+                            type="text"
+                            value={item.namaItem || ''}
+                            onChange={e => setItems(prev => {
+                              const copy = [...prev];
+                              copy[idx] = { ...copy[idx], namaItem: e.target.value };
+                              return copy;
+                            })}
+                            className="w-full text-xs border rounded px-2 py-1"
+                            style={inputStyle(theme)}
+                          />
+                        </td>
+
+                        <td className="border px-2 py-1" style={{ width: columnWidths.qty }}>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={
+                              editingQty[item.id] !== undefined
+                                ? editingQty[item.id]
+                                : (item.qty === "" || item.qty === 0) ? "" : Number(item.qty).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            }
+                            onFocus={() => {
+                              if (editingQty[item.id] === undefined) setEditingQty(prev => ({ ...prev, [item.id]: item.qty === 0 ? "" : String(item.qty) }));
+                            }}
+                            onChange={e => {
+                              let v = e.target.value.replace(/[^0-9.,]/g, "");
+                              v = v.replace(/,/g, ".");
+                              setEditingQty(prev => ({ ...prev, [item.id]: v }));
+                            }}
+                            onBlur={() => {
+                              const raw = editingQty[item.id] !== undefined ? editingQty[item.id] : String(item.qty || "");
+                              const num = raw === "" ? 0 : parseFloat(String(raw).replace(/,/g, "."));
+                              setItems(prev => {
+                                const copy = [...prev];
+                                copy[idx] = { ...copy[idx], qty: Number(Number(num || 0).toFixed(2)) };
+                                return copy;
+                              });
+                              handleItemChange(idx, 'qty', Number(Number(num || 0).toFixed(2)));
+                              setEditingQty(prev => { const c = { ...prev }; delete c[item.id]; return c; });
+                            }}
+                            className="w-full text-xs border rounded text-right px-2 py-1"
+                            style={inputStyle(theme)}
+                            autoComplete="off"
+                          />
+                        </td>
+
+                        <td className="border px-2 py-1" style={{ width: columnWidths.unit }}>
+                          <input
+                            type="text"
+                            value={item.unit || ''}
+                            onChange={e => setItems(prev => {
+                              const copy = [...prev];
+                              copy[idx] = { ...copy[idx], unit: e.target.value };
+                              return copy;
+                            })}
+                            className="w-full text-xs border rounded px-2 py-1"
+                            style={inputStyle(theme)}
+                          />
+                        </td>
+
+                        <td className="border px-2 py-1" style={{ width: columnWidths.price }}>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={
+                              editingPrice[item.id] !== undefined
+                                ? editingPrice[item.id]
+                                : (item.price === "" || item.price === 0) ? "" : Number(item.price).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            }
+                            onFocus={() => {
+                              if (editingPrice[item.id] === undefined) setEditingPrice(prev => ({ ...prev, [item.id]: item.price === 0 ? "" : String(item.price) }));
+                            }}
+                            onChange={e => {
+                              let val = e.target.value.replace(/[^0-9.,]/g, "");
+                              val = val.replace(/,/g, ".");
+                              setEditingPrice(prev => ({ ...prev, [item.id]: val }));
+                            }}
+                            onBlur={() => {
+                              const raw = editingPrice[item.id] !== undefined ? editingPrice[item.id] : String(item.price || "");
+                              const num = raw === "" ? 0 : parseFloat(String(raw).replace(/,/g, "."));
+                              setItems(prev => {
+                                const copy = [...prev];
+                                copy[idx] = { ...copy[idx], price: Number(Number(num || 0).toFixed(2)) };
+                                return copy;
+                              });
+                              handleItemChange(idx, 'price', Number(Number(num || 0).toFixed(2)));
+                              setEditingPrice(prev => { const c = { ...prev }; delete c[item.id]; return c; });
+                            }}
+                            className="w-full text-xs border rounded text-right px-2 py-1"
+                            style={inputStyle(theme)}
+                          />
+                        </td>
+
+                        <td className="border px-2 py-1" style={{ width: 60 }}>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            value={
+                              editingDiscPercent[item.id] !== undefined
+                                ? editingDiscPercent[item.id]
+                                : (item.discPercent === "" ? "" : String(item.discPercent))
+                            }
+                            onFocus={() => {
+                              if (editingDiscPercent[item.id] === undefined) {
+                                setEditingDiscPercent(prev => ({ ...prev, [item.id]: item.discPercent === 0 ? "" : String(item.discPercent) }));
+                              }
+                            }}
+                            onChange={e => {
+                              const v = e.target.value.replace(/[^0-9]/g, "");
+                              setEditingDiscPercent(prev => ({ ...prev, [item.id]: v }));
+                            }}
+                            onBlur={() => {
+                              const raw = editingDiscPercent[item.id] !== undefined ? editingDiscPercent[item.id] : String(item.discPercent || "");
+                              const num = raw === "" ? "" : Number(raw);
+                              // update via handleItemChange so recalculation happens
+                              handleItemChange(idx, 'discPercent', num);
+                              // also update local items state to keep UI in sync
+                              setItems(prev => {
+                                const copy = [...prev];
+                                copy[idx] = { ...copy[idx], discPercent: num === "" ? "" : Number(num) };
+                                return copy;
+                              });
+                              setEditingDiscPercent(prev => { const c = { ...prev }; delete c[item.id]; return c; });
+                            }}
+                            className="w-full text-xs border rounded text-right px-2 py-1"
+                            style={inputStyle(theme)}
+                            min="0"
+                            max="100"
+                          />
+                        </td>
+
+                        <td className="border px-2 py-1" style={{ width: 120 }}>
+                          <input
+                            type="text"
+                            inputMode="decimal"
+                            value={
+                              editingDiscAmountItem[item.id] !== undefined
+                                ? editingDiscAmountItem[item.id]
+                                : (item.discAmountItem === "" || item.discAmountItem === 0) ? "" : Number(item.discAmountItem).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                            }
+                            onFocus={() => {
+                              if (editingDiscAmountItem[item.id] === undefined) setEditingDiscAmountItem(prev => ({ ...prev, [item.id]: item.discAmountItem === 0 ? "" : String(item.discAmountItem) }));
+                            }}
+                            onChange={e => {
+                              let val = e.target.value.replace(/[^0-9.,]/g, "");
+                              val = val.replace(/,/g, ".");
+                              setEditingDiscAmountItem(prev => ({ ...prev, [item.id]: val }));
+                            }}
+                            onBlur={() => {
+                              const raw = editingDiscAmountItem[item.id] !== undefined ? editingDiscAmountItem[item.id] : String(item.discAmountItem || "");
+                              const num = raw === "" ? 0 : parseFloat(String(raw).replace(/,/g, "."));
+                              setItems(prev => {
+                                const copy = [...prev];
+                                copy[idx] = { ...copy[idx], discAmountItem: Number(Number(num || 0).toFixed(2)) };
+                                return copy;
+                              });
+                              handleItemChange(idx, 'discAmountItem', Number(Number(num || 0).toFixed(2)));
+                              setEditingDiscAmountItem(prev => { const c = { ...prev }; delete c[item.id]; return c; });
+                            }}
+                            className="w-full text-xs border rounded text-right px-2 py-1"
+                            style={inputStyle(theme)}
+                          />
+                        </td>
+
+                        <td className="border px-2 py-1 text-right" style={{ width: columnWidths.discAmount }}>
+                          { (Number(item.discAmount || 0)).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                        </td>
+                        
+                        <td className="border px-2 py-1" style={{ width: columnWidths.tax }}>
+                          <Select
+                            isMulti
+                            isClearable={false}
+                            options={masterPajak.map(p => ({ value: p.code, label: p.code }))
+                            }
+                            value={Array.isArray(item.tax) ? item.tax.map(code => ({ value: code, label: code })) : []}
+                            onChange={selected => {
+                              const vals = Array.isArray(selected) ? selected.map(s => s.value) : [];
+                              // gunakan handleItemChange agar kalkulasi diskon/pajak/amount dilakukan
+                              handleItemChange(idx, 'tax', vals);
+                            }}
+                            menuPortalTarget={document.body}
+                            styles={{ menuPortal: base => ({ ...base, zIndex: 9999 }) }}
+                            placeholder="Kode Pajak"
+                          />
+                        </td>
+
+                        <td className="border px-2 py-1" style={{ width: 100 }}>
+                          <select
+                            value={item.gudang || ''}
+                            onChange={e => setItems(prev => {
+                              const copy = [...prev];
+                              copy[idx] = { ...copy[idx], gudang: e.target.value };
+                              return copy;
+                            })}
+                            className="w-full"
+                            style={inputStyle(theme)}
+                          >
+                            <option value="">Pilih Gudang</option>
+                            {masterGudang.map(g => <option key={g.id} value={g.id}>{g.nama}</option>)}
+                          </select>
+                        </td>
+
+                        <td className="border px-2 py-1 text-right" style={{ width: 90 }}>
+                          { (item.taxamount1 || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                        </td>
+                        <td className="border px-2 py-1 text-right" style={{ width: 90 }}>
+                          { (item.taxamount2 || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                        </td>
+                        <td className="border px-2 py-1 text-right" style={{ width: 90 }}>
+                          { (item.taxamount3 || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                        </td>
+                        {/* DPP = qty * price - discount (use discAmountItem) */}
+                        <td className="border px-2 py-1 text-right" style={{ width: columnWidths.dpp }}>
+                          { (item.dpp || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                        </td>
+
+                        {/* Total = DPP + taxamount1 + taxamount2 + taxamount3 */}
+                        <td className="border px-2 py-1 text-right" style={{ width: columnWidths.total }}>
+                          { (item.amount || 0).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) }
+                        </td>
+
+                        <td className="border px-2 py-1 text-center" style={{ width: columnWidths.aksi }}>
+                          <button onClick={() => setItems(prev => prev.filter((_, i) => i !== idx))} className="px-2 py-1 rounded" style={{ background: theme.buttonHapus, color: '#fff' }}>X</button>
+                        </td>
                       </tr>
-                    ))}
+                     ))}
                   </tbody>
-                  <tfoot>
-                    <tr style={{ background: theme.tableFooterColor, color: theme.tableFontColor }}>
-                      <td colSpan={columns.length - 2} className="border px-1 py-1 text-right font-bold" style={{ borderColor: theme.cardBorderColor }}>
-                        Total:
-                      </td>
-                      <td className="border px-1 py-1 text-right font-bold" style={{ borderColor: theme.cardBorderColor }}>
-                        Rp {calculateTotal().toLocaleString('id-ID')}
-                      </td>
-                      <td className="border"></td>
-                    </tr>
-                  </tfoot>
                 </table>
               </div>
             </div>
@@ -1100,24 +1514,24 @@ useEffect(() => {
                       // Add selected items to detail
                       const selectedItems = masterBarangJasa.filter(item => selectedModalItems.includes(item.id));
                       const newDetailItems = selectedItems.map((item, idx) => ({
-                        id: Date.now() + idx,
-                        kodeItem: item.kode,
-                        namaItem: item.nama,
-                        qty: 0,
-                        unit: item.satuan || '',
-                        price: item.hargaJual || 0,
-                        discPercent: 0,
-                        discAmountItem: 0,
-                        discAmount: 0,
-                        tax: 0,
-                        amount: 0,
-                        gudang: formData.gudang
-                      }));
-                      setItems(prev => [...prev, ...newDetailItems]);
-                      setShowModal(false);
-                      setSelectedModalItems([]);
-                      setModalFilter("");
-                    }} style={{background: theme.buttonSimpan, color: '#fff'}}>Add</Button>
+                        id: Date.now() + Math.random() + idx,
+                         kodeItem: item.kode,
+                         namaItem: item.nama,
+                         qty: 0,
+                         unit: item.satuan || '',
+                         price: item.hargaJual || 0,
+                         discPercent: 0,
+                         discAmountItem: 0,
+                         discAmount: 0,
+                         tax: 0,
+                         amount: 0,
+                         gudang: formData.gudang
+                       }));
+                       setItems(prev => [...prev, ...newDetailItems]);
+                       setShowModal(false);
+                       setSelectedModalItems([]);
+                       setModalFilter("");
+                     }} style={{background: theme.buttonSimpan, color: '#fff'}}>Add</Button>
                   </div>
                 </div>
               </div>
@@ -1229,9 +1643,9 @@ useEffect(() => {
                       fontSize: 16,
                       padding: "12px 0"
                     }}
-                  >
-                  Kosongkan
-                </Button>
+>
+                    Kosongkan Data
+                  </Button>
                 </div>
               </div>
             </div>
@@ -1239,74 +1653,81 @@ useEffect(() => {
         )}
       </Card>
 
-      {/* Card List Transaksi Penjualan */}
-      <Card className="p-8 rounded-xl shadow-lg" style={{
-  background: theme.cardColor,
-  color: theme.fontColor,
-  fontFamily: theme.fontFamily,
-  borderColor: theme.cardBorderColor
-}}>
-  <h2 className="text-lg font-bold mb-4" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
-    Daftar Transaksi Penjualan
-  </h2>
-  <div className="flex gap-2 mb-2">
-    <Input
-      placeholder="Cari invoice/customer/total"
-      value={search}
-      onChange={e => setSearch(e.target.value)}
-      style={{ width: 260, background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.dropdownColor }}
-    />
-    <Button style={{ background: theme.buttonSimpan, color: "#fff", fontWeight: "bold", borderRadius: 8 }}>
-      Print
-    </Button>
-  </div>
-  <div className="overflow-x-auto rounded-lg border mb-4" style={{ borderColor: theme.cardBorderColor }}>
-    <table className="w-full border-collapse" style={{ fontFamily: theme.tableFontFamily }}>
-      <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
-        <tr>
-          <th className="px-3 py-2">Invoice No.</th>
-          <th className="px-3 py-2">Tanggal</th>
-          <th className="px-3 py-2 w-48 text-left">Customer</th>
-          <th className="px-3 py-2">Total</th>
-          <th className="px-3 py-2">Status</th>
-          <th className="px-3 py-2">Aksi</th>
-        </tr>
-      </thead>
-      <tbody>
-        {filteredPenjualan.map((trx, idx) => (
-          <tr key={trx.id} style={{
-            background: idx % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor,
-            color: theme.tableFontColor
-          }}>
-            <td className="px-2 py-1">{trx.nomorInvoice}</td>
-            <td className="px-2 py-1">{trx.tanggal ? new Date(trx.tanggal).toLocaleDateString('id-ID') : ''}</td>
-            <td className="px-2 py-1">
-              {masterPembeli.find(p => String(p.ID) === String(trx.customerId))?.nama || '-'}
-            </td>
-            <td className="px-2 py-1 text-right">Rp {trx.total?.toLocaleString('id-ID')}</td>
-            <td className="px-2 py-1">
-              <span className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-semibold">{trx.status}</span>
-            </td>
-            <td className="px-2 py-1 flex gap-2">
+      {/* Card Daftar Transaksi */}
+      <Card className="p-8 rounded-xl shadow-lg" style={{ background: theme.cardColor, color: theme.fontColor, fontFamily: theme.fontFamily, borderColor: theme.cardBorderColor }}>
+        <h2 className="text-lg font-bold mb-4" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+          Daftar Transaksi
+        </h2>
+
+        {/* Filter & Search */}
+        <div className="mb-4">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-1">
+              <Input
+                placeholder="Search by Invoice No, Customer, or Total"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                style={inputStyle(theme)}
+              />
+            </div>
+            <div>
               <Button
-                style={{ background: theme.buttonUpdate, color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
-                onClick={() => handleEdit(trx)}
+                onClick={() => setSearch('')}
+                style={{ background: theme.buttonHapus, color: '#fff', fontFamily: theme.fontFamily, border: `2px solid ${theme.buttonHapus}` }}
               >
-                Edit
+                Reset Filter
               </Button>
-              <Button
-                style={{ background: theme.buttonHapus, color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
-                onClick={() => handleDeleteTransaksi(trx.id)}
-              >
-                Hapus
-              </Button>
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-</Card>
+            </div>
+          </div>
+        </div>
+
+        {/* Table Transaksi */}
+        <div className="overflow-x-auto rounded-lg border" style={{ borderColor: theme.cardBorderColor }}>
+          <table className="min-w-full border-collapse text-xs" style={{ fontFamily: theme.tableFontFamily }}>
+            <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
+              <tr>
+                <th className="border px-2 py-1 text-left">No.</th>
+                <th className="border px-2 py-1 text-left">Invoice No.</th>
+                <th className="border px-2 py-1 text-left">Tanggal</th>
+                <th className="border px-2 py-1 text-left">Customer</th>
+                <th className="border px-2 py-1 text-right">Total</th>
+                <th className="border px-2 py-1 text-left">Status</th>
+                <th className="border px-2 py-1 text-left">Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredPenjualan.map((trx, index) => (
+                <tr key={trx.id} style={{ background: index % 2 === 0 ? theme.tableBodyColor : theme.tableAltRowColor, color: theme.tableFontColor }}>
+                  <td className="border px-2 py-1 text-center">{index + 1}</td>
+                  <td className="border px-2 py-1">{trx.nomorInvoice}</td>
+                  <td className="border px-2 py-1">{trx.tanggal ? new Date(trx.tanggal).toLocaleDateString('id-ID') : ''}</td>
+                  <td className="border px-2 py-1">
+                    {masterPembeli.find(p => String(p.ID) === String(trx.customerId))?.nama || '-'}
+                  </td>
+                  <td className="border px-2 py-1 text-right">Rp {trx.total?.toLocaleString('id-ID')}</td>
+                  <td className="border px-2 py-1">
+                    <span className="px-2 py-1 rounded bg-green-100 text-green-700 text-xs font-semibold">{trx.status}</span>
+                  </td>
+                  <td className="border px-2 py-1 flex gap-2">
+                    <Button
+                      style={{ background: theme.buttonUpdate, color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
+                      onClick={() => handleEdit(trx)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      style={{ background: theme.buttonHapus, color: "#fff", fontWeight: "bold", borderRadius: 6, fontSize: 12, padding: "2px 12px" }}
+                      onClick={() => handleDeleteTransaksi(trx.id)}
+                    >
+                      Hapus
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
     </div>
   );
 }

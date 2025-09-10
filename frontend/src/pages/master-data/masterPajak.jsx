@@ -15,6 +15,8 @@ export default function MasterPajak() {
     sales_tax_account: "",
     purchase_tax_account: "",
     order: "",
+    dpp_formula: "", // <-- tambah ini
+    tax_type: "PPN", // added: jenis pajak default
   });
   const [data, setData] = useState([]);
   const [editId, setEditId] = useState(null);
@@ -26,6 +28,7 @@ export default function MasterPajak() {
     sales_tax_account: "",
     purchase_tax_account: "",
     order: "",
+    tax_type: "",
   });
   const [accountData, setAccountData] = useState([]);
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -84,6 +87,8 @@ export default function MasterPajak() {
         sales_tax_account: "",
         purchase_tax_account: "",
         order: "",
+        dpp_formula: "", // <-- tambah ini
+        tax_type: "PPN",
       });
       setEditId(null);
     } catch (err) {
@@ -113,6 +118,8 @@ export default function MasterPajak() {
         sales_tax_account: "",
         purchase_tax_account: "",
         order: "",
+        dpp_formula: "", // <-- tambah ini
+        tax_type: "PPN",
       });
       setEditId(null);
     } catch (err) {
@@ -129,6 +136,8 @@ export default function MasterPajak() {
       sales_tax_account: "",
       purchase_tax_account: "",
       order: "",
+      dpp_formula: "", // <-- tambah ini
+      tax_type: "PPN",
     });
     setEditId(null);
   };
@@ -159,6 +168,17 @@ export default function MasterPajak() {
     row.purchase_tax_account.toLowerCase().includes(filter.purchase_tax_account.toLowerCase()) &&
     (row.order ? row.order.toString().includes(filter.order.toString()) : true)
   );
+
+  const taxTypeOptions = [
+    { value: 'PPN', label: 'PPN' },
+    { value: 'PPH', label: 'PPH' },
+    { value: 'PPH Final', label: 'PPH Final' },
+  ];
+
+  const getTaxTypeLabel = (v) => {
+    const o = taxTypeOptions.find(x => x.value === v);
+    return o ? o.label : v;
+  };
 
   const getAkunGLName = (kode) => {
     const akun = akunGL.find(a => a.kode === kode);
@@ -307,6 +327,36 @@ export default function MasterPajak() {
                   ))}
                 </select>
               </div>
+              <div>
+                <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                  Rumus DPP
+                </label>
+                <input
+                  type="text"
+                  name="dpp_formula"
+                  value={form.dpp_formula}
+                  onChange={handleChange}
+                  className="w-full border rounded-lg px-4 py-2"
+                  placeholder="Contoh: (harga - diskon) / 1.1"
+                  style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                />
+              </div>
+              <div>
+                <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                  Jenis Pajak
+                </label>
+                <select
+                  name="tax_type"
+                  value={form.tax_type}
+                  onChange={handleChange}
+                  className="w-full border rounded-lg px-4 py-2"
+                  style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                >
+                  {taxTypeOptions.map(opt => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
             <div className="flex gap-2 justify-end mt-6">
               <button
@@ -353,6 +403,7 @@ export default function MasterPajak() {
               <th className="px-2 py-2 text-center">Deskripsi</th>
               <th className="px-2 py-2 text-center">Akun Pajak Penjualan</th>
               <th className="px-2 py-2 text-center">Akun Pajak Pembelian</th>
+              <th className="px-2 py-2 text-center">Jenis Pajak</th>
               <th className="px-2 py-2 text-center rounded-tr-lg">Aksi</th>
             </tr>
             <tr style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
@@ -426,6 +477,17 @@ export default function MasterPajak() {
                   style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
                 />
               </th>
+              <th className="px-1 py-1">
+                <select
+                  value={filter.tax_type}
+                  onChange={e => setFilter({ ...filter, tax_type: e.target.value })}
+                  className="w-full px-1 py-1 rounded border text-xs"
+                  style={{ background: theme.fieldColor, color: theme.fontColor, fontFamily: theme.fontFamily }}
+                >
+                  <option value="">Semua Jenis</option>
+                  {taxTypeOptions.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                </select>
+              </th>
               <th className="px-1 py-1"></th>
             </tr>
           </thead>
@@ -446,6 +508,7 @@ export default function MasterPajak() {
                   <td className="px-2 py-2 text-center">{row.description}</td>
                   <td className="px-2 py-2 text-center">{getAkunGLName(row.sales_tax_account)}</td>
                   <td className="px-2 py-2 text-center">{getAkunGLName(row.purchase_tax_account)}</td>
+                  <td className="px-2 py-2 text-center">{getTaxTypeLabel(row.tax_type)}</td>
                   <td className="px-2 py-2 text-center">
                     <div className="flex justify-center gap-2">
                       <button

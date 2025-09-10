@@ -61,7 +61,12 @@ func UpdateMasterPembeli(db *gorm.DB) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		db.Model(&pembeli).Updates(input)
+		if err := db.Model(&pembeli).Updates(input).Error; err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		// Ambil data terbaru setelah update
+		db.First(&pembeli, id)
 		c.JSON(http.StatusOK, pembeli)
 	}
 }

@@ -34,7 +34,8 @@ export default function MasterPembeli() {
     diskon: 0,
     kategoriHarga: 'Regular',
     status: 'Aktif',
-    keterangan: ''
+    keterangan: '',
+    mata_uang: ''
   });
   const [editingId, setEditingId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -47,6 +48,7 @@ export default function MasterPembeli() {
   const [filterKode, setFilterKode] = useState('');
   const [filterNama, setFilterNama] = useState('');
   const [filterJenis, setFilterJenis] = useState('');
+  const [mataUangList, setMataUangList] = useState([]);
 
   // Pindahkan ke luar useEffect!
   const fetchPembeli = async () => {
@@ -194,7 +196,8 @@ export default function MasterPembeli() {
       diskon: item.diskon || 0,
       kategoriHarga: item.kategoriHarga || 'Regular',
       status: item.status || 'Aktif',
-      keterangan: item.keterangan || ''
+      keterangan: item.keterangan || '',
+      mata_uang: item.mata_uang || '' 
     });
     setEditingId(item.ID); // <-- GANTI DI SINI!
     setFormVisible(true);
@@ -257,6 +260,19 @@ export default function MasterPembeli() {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
+
+  // Ambil data mata uang
+  useEffect(() => {
+    const fetchMataUang = async () => {
+      try {
+        const res = await api.get("/master-mata-uang");
+        setMataUangList(res.data);
+      } catch (err) {
+        // handle error jika perlu
+      }
+    };
+    fetchMataUang();
+  }, []);
 
   return (
     <div
@@ -442,6 +458,8 @@ export default function MasterPembeli() {
                           }}
                         />
                       </div>
+
+                    
                     </div>
                   )}
                   {activeTab === "alamat" && (
@@ -753,6 +771,29 @@ export default function MasterPembeli() {
                           <option value="Corporate">Corporate</option>
                           <option value="Wholesale">Wholesale</option>
                           <option value="VIP">VIP</option>
+                        </select>
+                      </div>
+                        <div>
+                        <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                          Mata Uang
+                        </label>
+                        <select
+                          name="mata_uang"
+                          value={formData.mata_uang}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                          style={{
+                            background: theme.fieldColor,
+                            color: theme.fontColor,
+                            fontFamily: theme.fontFamily,
+                            borderColor: theme.dropdownColor,
+                          }}
+                        >
+                          {mataUangList.map(mu => (
+                            <option key={mu.kode} value={mu.kode}>
+                              {mu.kode} - {mu.nama}
+                            </option>
+                          ))}
                         </select>
                       </div>
                     </div>

@@ -24,6 +24,7 @@ type MasterPembeli struct {
 	KategoriHarga  string  `json:"kategoriHarga"`
 	Status         string  `json:"status"`
 	Keterangan     string  `json:"keterangan"`
+	MataUang       string  `json:"mata_uang"`
 }
 
 func (MasterPembeli) TableName() string {
