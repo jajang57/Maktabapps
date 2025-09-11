@@ -137,6 +137,7 @@ export default function MasterPembeli() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validateForm()) return;
+    console.log("Data yang dikirim ke backend:", formData);
     try {
       if (editingId) {
         await api.put(`/master-pembeli/${editingId}`, formData);
@@ -167,7 +168,8 @@ export default function MasterPembeli() {
         diskon: 0,
         kategoriHarga: 'Regular',
         status: 'Aktif',
-        keterangan: ''
+        keterangan: '',
+        mata_uang: ''
       });
       setErrors({});
     } catch (err) {
@@ -240,6 +242,7 @@ export default function MasterPembeli() {
       diskon: 0,
       kategoriHarga: 'Regular',
       status: 'Aktif',
+      keterangan: '',
       keterangan: ''
     });
     setEditingId(null);
@@ -835,7 +838,8 @@ export default function MasterPembeli() {
                             diskon: 0,
                             kategoriHarga: 'Regular',
                             status: 'Aktif',
-                            keterangan: ''
+                            keterangan: '',
+                            mata_uang: ''
                           })}
                           className="px-6 py-2 rounded-lg font-semibold"
                           style={{
@@ -897,7 +901,8 @@ export default function MasterPembeli() {
                             diskon: 0,
                             kategoriHarga: 'Regular',
                             status: 'Aktif',
-                            keterangan: ''
+                            keterangan: '',
+                            mata_uang: ''
                           })}
                           className="px-6 py-2 rounded-lg font-semibold"
                           style={{

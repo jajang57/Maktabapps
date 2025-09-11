@@ -151,6 +151,8 @@ export default function MasterMataUang() {
           KeuntunganBelumDirealisasi: data.KeuntunganBelumDirealisasi || "",
           HutangJatuhTempo: data.HutangJatuhTempo || "",
           PiutangJatuhTempo: data.PiutangJatuhTempo || "",
+          BiayaLainLain: data.BiayaLainLain || "",
+          BiayaMaterai: data.BiayaMaterai || "",
         });
 
         // Set editId untuk menandai bahwa data sedang diedit
@@ -306,19 +308,19 @@ export default function MasterMataUang() {
             {activeTab === "AkunGL" && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
-                  { key: "HutangUsaha", label: "Hutang Usaha" },
-                  { key: "PiutangUsaha", label: "Piutang Usaha" },
-                  { key: "UangMukaBeli", label: "Uang Muka Pembelian" },
-                  { key: "UangMukaJual", label: "Uang Muka Penjualan" },
-                  { key: "DiskonJual", label: "Diskon Penjualan" },
-                  { key: "DiskonBeli", label: "Diskon Pembelian" },
-                  { key: "Pembulatan", label: "Pembulatan" },
-                  { key: "KeuntunganDirealisasi", label: "Keuntungan Direalisasi" },
-                  { key: "KeuntunganBelumDirealisasi", label: "Keuntungan Belum Direalisasi" },
-                  { key: "HutangJatuhTempo", label: "Hutang Jatuh Tempo" },
-                  { key: "PiutangJatuhTempo", label: "Piutang Jatuh Tempo" },
-                  { key: "BiayaLainLain", label: "Biaya Lain-lain" },
-                  { key: "BiayaMaterai", label: "Biaya Materai" },
+                  { key: "HutangUsaha", label: "Akun Pembelian" },
+                  { key: "PiutangUsaha", label: "Akun Penjualan" },
+                  { key: "UangMukaBeli", label: "Akun Uang Muka Pembelian" },
+                  { key: "UangMukaJual", label: "Akun Uang Muka Penjualan" },
+                  { key: "DiskonJual", label: "Akun Diskon Penjualan" },
+                  { key: "DiskonBeli", label: "Akun Diskon Pembelian" },
+                  { key: "Pembulatan", label: "Akun Pembulatan" },
+                  { key: "KeuntunganDirealisasi", label: "Akun Keuntungan Direalisasi" },
+                  { key: "KeuntunganBelumDirealisasi", label: "Akun Keuntungan Belum Direalisasi" },
+                  { key: "HutangJatuhTempo", label: "Akun Pembelian Hutang Jatuh Tempo" },
+                  { key: "PiutangJatuhTempo", label: "Akun Penjualan Piutang Jatuh Tempo" },
+                  { key: "BiayaLainLain", label: "Akun Biaya Lain-lain" },
+                  { key: "BiayaMaterai", label: "Akun Biaya Materai" },
                 ].map((field) => (
                   <div key={field.key}>
                     <label className="block mb-1 font-semibold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
