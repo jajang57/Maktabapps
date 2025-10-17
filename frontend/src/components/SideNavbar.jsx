@@ -9,7 +9,8 @@ export default function SideNavbar({ onClose }) {
   const { user, logout } = useAuth();
 
   // State untuk dropdown dan subDropdown
-  const [openDropdown, setOpenDropdown] = useState(null);
+  // Ubah ke array agar bisa buka banyak dropdown sekaligus
+  const [openDropdowns, setOpenDropdowns] = useState([]);
   const [openSubDropdown, setOpenSubDropdown] = useState(null);
 
   // Tambahkan icon SVG di setiap menu utama
@@ -32,7 +33,7 @@ export default function SideNavbar({ onClose }) {
         </svg>
       ),
       dropdown: [
-        { name: "Akun category", to: "/master-data/mastercatcoa" },
+       // { name: "Akun category", to: "/master-data/mastercatcoa" },
         { name: "Akun", to: "/master-data/coa" },
         { name: "Buku Kas", to: "/input-transaksi" },
         { name: "Pembelian", to: "/transaksi/pembelian" },
@@ -71,6 +72,22 @@ export default function SideNavbar({ onClose }) {
         { name: "Pemasok", to: "/master-data/pemasok" },
         { name: "Pembeli", to: "/master-data/pembeli" },
         { name: "Pekerjaan", to: "/master-data/project" },
+        { name: "Mata Uang", to: "/master-data/mata-uang" },
+        { name: "Pajak", to: "/master-data/pajak" },
+      ],
+    },
+    {
+      name: "Persediaan",
+      icon: (
+        <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+          <rect x="3" y="5" width="18" height="14" rx="2" />
+          <path d="M16 3v4M8 3v4" />
+        </svg>
+      ),
+      dropdown: [
+  { name: "Barang Dan Jasa", to: "/master-data/barang-jasa" },
+  { name: "Gudang", to: "/master-data/gudang" },
+  { name: "Penyesuaian Persediaan", to: "/master-data/penyesuaian-persediaan" },
       ],
     },
     {
@@ -178,10 +195,15 @@ export default function SideNavbar({ onClose }) {
   return (
     <aside
       className="w-64 min-h-screen shadow-lg flex flex-col bg-white relative"
-      style={{ background: theme.cardColor, color: theme.fontColor }}
+      style={{
+        background: theme.cardColor,
+        color: theme.fontColor,
+        overflowY: "auto", // tambahkan ini
+        height: "100vh",   // tambahkan ini agar sidebar selalu penuh
+      }}
     >
       {/* Tombol close */}
-      {onClose && (
+      {/* {onClose && (
         <button
           className="absolute top-2 right-2 bg-gray-100 rounded-full p-1"
           onClick={onClose}
@@ -191,7 +213,7 @@ export default function SideNavbar({ onClose }) {
             <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
-      )}
+      )} */}
 
       <nav className="flex-1 flex flex-col gap-1 px-2 mt-4">
         {navItems.map((item, idx) =>
@@ -200,16 +222,20 @@ export default function SideNavbar({ onClose }) {
               <button
                 type="button"
                 className={`w-full flex items-center gap-2 font-bold justify-between px-3 py-2 rounded hover:bg-indigo-100 transition ${
-                  openDropdown === idx ? "bg-indigo-500 text-white" : ""
+                  openDropdowns.includes(idx) ? "bg-indigo-500 text-white" : ""
                 }`}
-                onClick={() => setOpenDropdown(openDropdown === idx ? null : idx)}
+                onClick={() => {
+                  setOpenDropdowns(openDropdowns.includes(idx)
+                    ? openDropdowns.filter(i => i !== idx)
+                    : [...openDropdowns, idx]);
+                }}
               >
                 <span className="flex items-center gap-2">
                   {item.icon}
                   {item.name}
                 </span>
                 <svg
-                  className={`w-4 h-4 ml-1 transition-transform ${openDropdown === idx ? "rotate-90" : ""}`}
+                  className={`w-4 h-4 ml-1 transition-transform ${openDropdowns.includes(idx) ? "rotate-90" : ""}`}
                   fill="none"
                   stroke="currentColor"
                   strokeWidth={2}
@@ -218,7 +244,7 @@ export default function SideNavbar({ onClose }) {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
-              {openDropdown === idx && (
+              {openDropdowns.includes(idx) && (
                 <div className="ml-6 mt-1 flex flex-col gap-1">
                   {item.dropdown.map((drop, dropIdx) =>
                     drop.subDropdown ? (

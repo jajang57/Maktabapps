@@ -47,7 +47,29 @@ func main() {
 	if err != nil {
 		panic("failed to connect database")
 	}
-	err = db.AutoMigrate(&models.AJE{}, &models.UserThemeSetting{}, &models.MasterCOA{}, &models.MasterCategoryCOA{}, &models.InputTransaksi{}, &models.User{}, &models.MasterProject{}, &models.GL{}, &models.GLSummary{})
+	err = db.AutoMigrate(
+		&models.MasterGudang{},
+		&models.AJE{},
+		&models.UserThemeSetting{},
+		&models.MasterCOA{},
+		&models.MasterCategoryCOA{},
+		&models.InputTransaksi{},
+		&models.User{},
+		&models.MasterProject{},
+		&models.GL{},
+		&models.GLSummary{},
+		&models.MasterKelompokItem{},
+		&models.MasterKategori{},
+		&models.MasterBarangJasa{},
+		&models.Penjualan{},
+		&models.PenjualanDetail{},
+		&models.MasterGudangGroup{},
+		&models.MasterDepartement{},
+		&models.MasterPembeli{},
+		&models.MasterPemasok{},
+		&models.MasterMataUang{},
+		&models.MasterPajak{},
+	)
 
 	if err != nil {
 		panic(fmt.Sprintf("AutoMigrate error: %v", err))
@@ -136,6 +158,83 @@ func main() {
 		api.POST("/aje/delete", handlers.DeleteAJE(db))                    // delete
 		api.GET("/aje/cek-no-bukti", handlers.CekNoBuktiAJE(db))           // cek no bukti di AJE
 		api.GET("/gl/cek-no-bukti", handlers.CekNoBuktiGL(db))             // cek no bukti di GL
+
+		// Master Kelompok Item Routes
+		api.GET("/master-kelompok-item", handlers.GetMasterKelompokItem(db))
+		api.POST("/master-kelompok-item", handlers.CreateMasterKelompokItem(db))
+		api.PUT("/master-kelompok-item/:id", handlers.UpdateMasterKelompokItem(db))
+		api.DELETE("/master-kelompok-item/:id", handlers.DeleteMasterKelompokItem(db))
+
+		// Master Kategori Routes
+		api.GET("/master-kategori", handlers.GetMasterKategori(db))
+		api.POST("/master-kategori", handlers.CreateMasterKategori(db))
+		api.PUT("/master-kategori/:id", handlers.UpdateMasterKategori(db))
+		api.DELETE("/master-kategori/:id", handlers.DeleteMasterKategori(db))
+
+		// Master Barang Jasa Routes
+		api.GET("/master-barang-jasa", handlers.GetMasterBarangJasa(db))
+		api.POST("/master-barang-jasa", handlers.CreateMasterBarangJasa(db))
+		api.PUT("/master-barang-jasa/:id", handlers.UpdateMasterBarangJasa(db))
+		api.DELETE("/master-barang-jasa/:id", handlers.DeleteMasterBarangJasa(db))
+		api.GET("/master-barang-jasa/by-jenis", handlers.GetMasterBarangJasaByJenis(db))
+		api.GET("/master-barang-jasa/for-sale", handlers.GetMasterBarangJasaForSale(db))
+		api.GET("/master-barang-jasa/for-purchase", handlers.GetMasterBarangJasaForPurchase(db))
+
+		// Penjualan Routes
+		penjualanHandler := handlers.NewPenjualanHandler(db)
+		api.GET("/penjualan", penjualanHandler.GetAllPenjualan)
+		api.GET("/penjualan/:id", penjualanHandler.GetPenjualanByID)
+		api.POST("/penjualan", penjualanHandler.CreatePenjualan)
+		api.PUT("/penjualan/:id", penjualanHandler.UpdatePenjualan)
+		api.DELETE("/penjualan/:id", penjualanHandler.DeletePenjualan)
+		api.GET("/penjualan/nomor/:nomor", penjualanHandler.GetPenjualanByNomor)
+		api.PATCH("/penjualan/:id/status", penjualanHandler.UpdatePenjualanStatus)
+		api.GET("/penjualan/report", penjualanHandler.GetPenjualanReport)
+		api.GET("/penjualan/next-invoice-number", penjualanHandler.GetNextInvoiceNumber)
+
+		// Master Gudang Routes
+		api.POST("/master-gudang", handlers.CreateGudang(db))
+		api.GET("/master-gudang", handlers.GetGudangList(db))
+		api.PUT("/master-gudang/:id", handlers.UpdateGudang(db))
+		api.DELETE("/master-gudang/:id", handlers.DeleteGudang(db))
+
+		// Master Gudang Group Routes
+		api.GET("/master-gudang-group", handlers.GetMasterGudangGroup(db))
+		api.POST("/master-gudang-group", handlers.CreateMasterGudangGroup(db))
+		api.PUT("/master-gudang-group/:id", handlers.UpdateMasterGudangGroup(db))
+		api.DELETE("/master-gudang-group/:id", handlers.DeleteMasterGudangGroup(db))
+
+		// Master Departement Routes
+		api.GET("/master-departement", handlers.GetMasterDepartement(db))
+		api.POST("/master-departement", handlers.CreateMasterDepartement(db))
+		api.PUT("/master-departement/:id", handlers.UpdateMasterDepartement(db))
+		api.DELETE("/master-departement/:id", handlers.DeleteMasterDepartement(db))
+
+		// Master Pembeli Routes
+		api.GET("/master-pembeli", handlers.GetMasterPembeli(db))
+		api.POST("/master-pembeli", handlers.CreateMasterPembeli(db))
+		api.PUT("/master-pembeli/:id", handlers.UpdateMasterPembeli(db))
+		api.DELETE("/master-pembeli/:id", handlers.DeleteMasterPembeli(db))
+
+		api.GET("/pemasok", handlers.GetMasterPemasok(db))
+		api.POST("/pemasok", handlers.CreateMasterPemasok(db))
+		api.PUT("/pemasok/:id", handlers.UpdateMasterPemasok(db))
+		api.DELETE("/pemasok/:id", handlers.DeleteMasterPemasok(db))
+
+		//Master Mata Uang Routes
+		api.GET("/master-mata-uang", handlers.GetMasterMataUang(db))           // Mengambil semua data mata uang
+		api.POST("/master-mata-uang", handlers.CreateMasterMataUang(db))       // Menambahkan data mata uang
+		api.PUT("/master-mata-uang/:id", handlers.UpdateMasterMataUang(db))    // Mengupdate data mata uang berdasarkan ID
+		api.DELETE("/master-mata-uang/:id", handlers.DeleteMasterMataUang(db)) // Menghapus data mata uang berdasarkan ID
+		//api.GET("/master-mata-uang/by-kode", handlers.GetMasterMataUangByKode(db)) // Mengambil data mata uang berdasarkan kode
+		api.GET("/master-mata-uang/:id", handlers.GetMasterMataUangByID(db)) // Mengambil data mata uang berdasarkan ID
+
+		// Master Pajak Routes
+		api.POST("/master-pajak", handlers.CreateMasterPajak(db))
+		api.GET("/master-pajak", handlers.GetMasterPajakList(db))
+		api.GET("/master-pajak/:id", handlers.GetMasterPajakByID(db))
+		api.PUT("/master-pajak/:id", handlers.UpdateMasterPajak(db))
+		api.DELETE("/master-pajak/:id", handlers.DeleteMasterPajak(db))
 	}
 
 	r.Run("0.0.0.0:8080")

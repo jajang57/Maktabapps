@@ -17,7 +17,7 @@ import MasterCard from "../../master_fn/MasterCard";
 import MasterButton from "../../master_fn/MasterButton";
 
 export default function MasterCategoryCOA() {
-  const { theme } = useTheme(); // tambahkan ini
+  const { theme } = useTheme();
   const [form, setForm] = useState({ kode: "", nama: "", tipeAkun: "", isKasBank: false });
   const [data, setData] = useState([]);
   const [error, setError] = useState("");
@@ -170,9 +170,35 @@ export default function MasterCategoryCOA() {
     },
   ];
 
+  // Custom style untuk DataTable agar mengikuti theme
+  const customStyles = {
+    headRow: {
+      style: {
+        backgroundColor: theme.tableHeaderColor,
+        color: theme.tableFontColor,
+        fontFamily: theme.tableFontFamily,
+        fontWeight: 600,
+      },
+    },
+    rows: {
+      style: {
+        backgroundColor: theme.tableBodyColor,
+        color: theme.tableFontColor,
+        fontFamily: theme.tableFontFamily,
+      },
+    },
+    pagination: {
+      style: {
+        backgroundColor: theme.tableBodyColor,
+        color: theme.tableFontColor,
+        fontFamily: theme.tableFontFamily,
+      },
+    },
+  };
+
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold tracking-tight mb-4">Master Category COA</h1>
+      <h1 className="text-2xl font-bold tracking-tight mb-4"  style={{ color: theme.fontColor }}>Master Category COA</h1>
       <div className="flex flex-col md:flex-row gap-8">
         <MasterCard className="w-full max-w-md border p-6" >
           <form
@@ -182,7 +208,7 @@ export default function MasterCategoryCOA() {
           >
             <div className="space-y-3">
               <div>
-                <label className="block mb-1 font-semibold text-gray-700">
+                <label className="block mb-1 font-semibold text-gray-700" style={{ color: theme.fontColor }}>
                   Kode Kategori
                 </label>
                 <input
@@ -193,10 +219,15 @@ export default function MasterCategoryCOA() {
                   className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
                   placeholder="Contoh: KB001"
                   required
+                    style={{
+                    background: theme.fieldColor, // ini untuk background field
+                    color: theme.fontColor,        // ini untuk warna teks
+                    fontFamily: theme.fontFamily,  // opsional, agar konsisten
+                  }}
                 />
               </div>
               <div>
-                <label className="block mb-1 font-semibold text-gray-700">
+                <label className="block mb-1 font-semibold text-gray-700" style={{ color: theme.fontColor }}>
                   Nama Kategori
                 </label>
                 <input
@@ -204,14 +235,19 @@ export default function MasterCategoryCOA() {
                   name="nama"
                   value={form.nama}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" 
                   placeholder="Contoh: Kas & Bank"
+                  style={{
+                    background: theme.fieldColor, // ini untuk background field
+                    color: theme.fontColor,        // ini untuk warna teks
+                    fontFamily: theme.fontFamily,  // opsional, agar konsisten
+                  }}
                   required
                 />
               </div>
               {/* Checkbox di bawah Nama Kategori */}
               <div>
-                <label className="inline-flex items-center mt-2">
+                <label className="inline-flex items-center mt-2" style={{ color: theme.fontColor }}>
                   <input
                     type="checkbox"
                     name="isKasBank"
@@ -219,19 +255,24 @@ export default function MasterCategoryCOA() {
                     onChange={handleChange}
                     className="form-checkbox h-5 w-5 text-indigo-600"
                   />
-                  <span className="ml-2 text-gray-700">Akun Kas & Bank</span>
+                  <span className="ml-2 text-gray-700" style={{ color: theme.fontColor }}>Akun Kas & Bank</span>
                 </label>
               </div>
               <div>
-                <label className="block mb-1 font-semibold text-gray-700">
+                <label className="block mb-1 font-semibold text-gray-700" style={{ color: theme.fontColor }}>
                   Tipe Akun
                 </label>
                 <select
                   name="tipeAkun"
                   value={form.tipeAkun}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition" 
                   required
+                    style={{
+                    background: theme.fieldColor, // ini untuk background field
+                    color: theme.fontColor,        // ini untuk warna teks
+                    fontFamily: theme.fontFamily,  // opsional, agar konsisten
+                  }}
                 >
                   <option value="">Pilih Tipe Akun</option>
                   <option value="1">Asset</option> {/* 1 */}
@@ -268,6 +309,11 @@ export default function MasterCategoryCOA() {
               className="border border-gray-300 rounded-lg px-3 py-2 w-full md:w-64 focus:outline-none focus:ring-2 focus:ring-indigo-400 transition"
               value={filterText}
               onChange={handleFilter}
+              style={{
+                  background: theme.fieldColor, // ini untuk background field
+                  color: theme.fontColor,        // ini untuk warna teks
+                  fontFamily: theme.fontFamily,  // opsional, agar konsisten
+                }}
             />
           </div>
           <div ref={tableRef}>
@@ -280,6 +326,7 @@ export default function MasterCategoryCOA() {
                 striped
                 persistTableHead
                 pagination={false}
+                customStyles={customStyles} // tambahkan ini
               />
             </div>
           </div>

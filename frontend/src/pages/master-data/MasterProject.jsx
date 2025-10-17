@@ -3,8 +3,11 @@ import api from '../../utils/api';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
+import { useTheme } from '../../context/ThemeContext'; // tambahkan import ini
 
 export default function MasterProject() {
+  const { theme } = useTheme(); // gunakan theme
+
   const [projects, setProjects] = useState([]);
   const [formData, setFormData] = useState({
     nama_project: '',
@@ -246,19 +249,31 @@ export default function MasterProject() {
   const paginatedData = filteredData.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="space-y-6 p-6">
-      <h1 className="text-2xl font-bold text-gray-900">Master Data Project</h1>
+    <div
+      className="space-y-6 p-6"
+      style={{
+        background: theme.backgroundColor,
+        color: theme.fontColor,
+        fontFamily: theme.fontFamily,
+        minHeight: "100vh",
+      }}
+    >
+      <h1 className="text-2xl font-bold" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+        Master Data Project
+      </h1>
       
       {/* Form Input */}
-      <Card>
+      <Card style={{ background: theme.cardColor }}>
         <CardHeader>
-          <CardTitle>{editingId ? 'Edit Project' : 'Tambah Project Baru'}</CardTitle>
+          <CardTitle style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+            {editingId ? 'Edit Project' : 'Tambah Project Baru'}
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Kode Project
                 </label>
                 <Input
@@ -271,17 +286,22 @@ export default function MasterProject() {
                         : (previewCode || '(Generating...)')
                   }
                   disabled
-                  className="bg-gray-100"
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
                 {!editingId && (
-                  <p className="text-xs text-gray-500 mt-1">
+                  <p className="text-xs mt-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     * Kode akan di-generate otomatis saat menyimpan
                   </p>
                 )}
               </div>
               
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium mb-1" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                   Nama Project *
                 </label>
                 <Input
@@ -291,17 +311,39 @@ export default function MasterProject() {
                   onChange={handleInputChange}
                   placeholder="Nama project"
                   className={errors.nama_project ? 'border-red-500' : ''}
+                  style={{
+                    background: theme.fieldColor,
+                    color: theme.fontColor,
+                    fontFamily: theme.fontFamily,
+                    borderColor: theme.dropdownColor,
+                  }}
                 />
                 {errors.nama_project && <p className="text-red-500 text-xs mt-1">{errors.nama_project}</p>}
               </div>
             </div>
 
             <div className="flex gap-2">
-              <Button type="submit" className="bg-indigo-600 hover:bg-indigo-700">
+              <Button
+                type="submit"
+                style={{
+                  background: theme.buttonSimpan,
+                  color: "#fff",
+                  fontFamily: theme.fontFamily,
+                }}
+              >
                 {editingId ? 'Update' : 'Simpan'}
               </Button>
               {editingId && (
-                <Button type="button" variant="outline" onClick={handleCancel}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleCancel}
+                  style={{
+                    background: theme.buttonHapus,
+                    color: "#fff",
+                    fontFamily: theme.fontFamily,
+                  }}
+                >
                   Batal
                 </Button>
               )}
@@ -311,16 +353,22 @@ export default function MasterProject() {
       </Card>
 
       {/* Tabel Data */}
-      <Card>
+      <Card style={{ background: theme.cardColor }}>
         <CardHeader>
           <div className="flex justify-between items-center">
-            <CardTitle>Data Project</CardTitle>
+            <CardTitle style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Data Project</CardTitle>
             <div className="w-64">
               <Input
                 type="text"
                 placeholder="Cari project..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  background: theme.fieldColor,
+                  color: theme.fontColor,
+                  fontFamily: theme.fontFamily,
+                  borderColor: theme.dropdownColor,
+                }}
               />
             </div>
           </div>
@@ -328,32 +376,36 @@ export default function MasterProject() {
         <CardContent>
           {isLoading ? (
             <div className="text-center py-8">
-              <p className="text-gray-500">Loading data...</p>
+              <p style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>Loading data...</p>
             </div>
           ) : (
             <>
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse border border-gray-300">
-                  <thead>
-                    <tr className="bg-gray-50">
-                      <th className="border border-gray-300 px-4 py-2 text-left">Kode Project</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Nama Project</th>
-                      <th className="border border-gray-300 px-4 py-2 text-center">Aksi</th>
+                <table className="w-full border-collapse" style={{ fontFamily: theme.tableFontFamily }}>
+                  <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
+                    <tr>
+                      <th className="px-4 py-2 text-left">Kode Project</th>
+                      <th className="px-4 py-2 text-left">Nama Project</th>
+                      <th className="px-4 py-2 text-center">Aksi</th>
                     </tr>
                   </thead>
                   <tbody>
                     {paginatedData.length > 0 ? (
                       paginatedData.map((item) => (
-                        <tr key={item.ID} className="hover:bg-gray-50">
-                          <td className="border border-gray-300 px-4 py-2">{item.kode_project}</td>
-                          <td className="border border-gray-300 px-4 py-2">{item.nama_project}</td>
-                          <td className="border border-gray-300 px-4 py-2 text-center">
+                        <tr key={item.ID} style={{ background: theme.tableBodyColor, color: theme.tableFontColor, fontFamily: theme.tableFontFamily }}>
+                          <td className="px-4 py-2">{item.kode_project}</td>
+                          <td className="px-4 py-2">{item.nama_project}</td>
+                          <td className="px-4 py-2 text-center">
                             <div className="flex gap-1 justify-center">
                               <Button
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleEdit(item)}
-                                className="text-blue-600 hover:text-blue-800"
+                                style={{
+                                  background: theme.buttonUpdate,
+                                  color: "#fff",
+                                  fontFamily: theme.fontFamily,
+                                }}
                               >
                                 Edit
                               </Button>
@@ -361,7 +413,11 @@ export default function MasterProject() {
                                 size="sm"
                                 variant="outline"
                                 onClick={() => handleDelete(item.ID)}
-                                className="text-red-600 hover:text-red-800"
+                                style={{
+                                  background: theme.buttonHapus,
+                                  color: "#fff",
+                                  fontFamily: theme.fontFamily,
+                                }}
                               >
                                 Hapus
                               </Button>
@@ -371,7 +427,7 @@ export default function MasterProject() {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan="3" className="border border-gray-300 px-4 py-8 text-center text-gray-500">
+                        <td colSpan="3" className="px-4 py-8 text-center" style={{ color: theme.tableFontColor, background: theme.tableBodyColor, fontFamily: theme.tableFontFamily }}>
                           Tidak ada data project
                         </td>
                       </tr>
@@ -388,11 +444,17 @@ export default function MasterProject() {
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
+                    style={{
+                      background: theme.buttonRefresh,
+                      color: "#fff",
+                      fontFamily: theme.fontFamily,
+                      opacity: currentPage === 1 ? 0.5 : 1,
+                    }}
                   >
                     Sebelumnya
                   </Button>
                   
-                  <span className="text-sm text-gray-600">
+                  <span className="text-sm" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
                     Halaman {currentPage} dari {totalPages}
                   </span>
                   
@@ -401,6 +463,12 @@ export default function MasterProject() {
                     size="sm"
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
+                    style={{
+                      background: theme.buttonSimpan,
+                      color: "#fff",
+                      fontFamily: theme.fontFamily,
+                      opacity: currentPage === totalPages ? 0.5 : 1,
+                    }}
                   >
                     Selanjutnya
                   </Button>

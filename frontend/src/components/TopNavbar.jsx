@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import { useTheme } from "../context/ThemeContext";
 
 export default function TopNavbar({ onToggleSidebar }) {
   const location = useLocation();
@@ -11,6 +12,7 @@ export default function TopNavbar({ onToggleSidebar }) {
   const dropdownRefs = useRef([]);
   const subDropdownRefs = useRef([]);
   const userMenuRef = useRef(null);
+  const { theme } = useTheme();
 
   // Tutup dropdown jika klik di luar
   useEffect(() => {
@@ -59,7 +61,7 @@ export default function TopNavbar({ onToggleSidebar }) {
     {
       name: "Transaksi",
       dropdown: [
-        { name: "Akun category", to: "/master-data/mastercatcoa"},
+       // { name: "Akun category", to: "/master-data/mastercatcoa"},
         { name: "Akun", to: "/master-data/coa"},
         { name: "Buku Kas", to: "/input-transaksi" },
         { name: "Pembelian", to: "/transaksi/pembelian" },
@@ -88,6 +90,15 @@ export default function TopNavbar({ onToggleSidebar }) {
         { name: "Pemasok", to: "/master-data/pemasok" },
         { name: "Pembeli", to: "/master-data/pembeli" },
         { name: "Pekerjaan", to: "/master-data/project" },
+
+      ],
+    },
+    {
+      name: "Persediaan",
+      dropdown: [
+        { name: "Barang/Jasa" },
+        { name: "Gudang" },
+        { name: "Penyesuaian Persediaan" },
 
       ],
     },
@@ -158,7 +169,14 @@ export default function TopNavbar({ onToggleSidebar }) {
 
   // Header bar
   const Header = () => (
-    <header className="flex items-center justify-between px-4 py-2 shadow bg-white">
+    <header
+      className="flex items-center justify-between px-4 py-2 shadow"
+      style={{
+        background: theme.appHeaderColor,
+        color: theme.fontColor,
+        fontFamily: theme.fontFamily,
+      }}
+    >
       <div className="flex items-center gap-2">
         {/* Sidebar toggle button (optional, pass onToggleSidebar prop if needed) */}
         {onToggleSidebar && (
@@ -172,23 +190,29 @@ export default function TopNavbar({ onToggleSidebar }) {
             </svg>
           </button>
         )}
-        <span className="font-bold text-xl tracking-tight">Temui</span>
+        <span className="font-bold text-xl tracking-tight" style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+          Temui
+        </span>
       </div>
       <div className="flex items-center gap-2">
         {/* Example icons */}
-        <button className="bg-gray-100 rounded-full p-2 hover:bg-gray-200 transition" aria-label="Calendar">
+        <button
+          className="rounded-full p-2 transition"
+          style={{ background: theme.headerIconBgColor }}
+          aria-label="Calendar"
+        >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <rect x="3" y="4" width="18" height="18" rx="2" />
             <path d="M16 2v4M8 2v4M3 10h18" />
           </svg>
         </button>
-        <button className="bg-gray-100 rounded-full p-2 hover:bg-gray-200 transition" aria-label="Note">
+        <button className="bg-gray-100 rounded-full p-2 hover:bg-gray-200 transition" style={{ background: theme.headerIconBgColor }} aria-label="Note">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h7l5 5v11a2 2 0 01-2 2z" />
             <path d="M17 21v-8H7v8" />
           </svg>
         </button>
-        <button className="bg-gray-100 rounded-full p-2 hover:bg-gray-200 transition" aria-label="Notification">
+        <button className="bg-gray-100 rounded-full p-2 hover:bg-gray-200 transition" style={{ background: theme.headerIconBgColor }} aria-label="Notification">
           <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
             <path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
           </svg>
@@ -204,9 +228,15 @@ export default function TopNavbar({ onToggleSidebar }) {
   return (
     <div>
       <Header />
-      <nav className="bg-white shadow px-4 py-2 flex items-center justify-between">
+      <nav
+        className="shadow px-4 py-2 flex items-center justify-between"
+        style={{
+          background: theme.cardColor,
+          color: theme.fontColor,
+          fontFamily: theme.fontFamily,
+        }}
+      >
         <div className="flex items-center space-x-1">
-          <span className="font-bold text-lg mr-6 text-indigo-600">AkuntansiApp</span>
           {navItems.map((item, idx) =>
           item.dropdown ? (
             <div
@@ -227,7 +257,9 @@ export default function TopNavbar({ onToggleSidebar }) {
                 }`}
                 onClick={() => setOpenDropdown(openDropdown === idx ? null : idx)}
               >
-                {item.name}
+                <span style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}>
+                  {item.name}
+                </span>
                 <svg
                   className="w-4 h-4 ml-1"
                   fill="none"

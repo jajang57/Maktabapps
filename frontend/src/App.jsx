@@ -14,6 +14,10 @@ import MasterPemasok from "./pages/master-data/MasterPemasok";
 import MasterPembeli from "./pages/master-data/MasterPembeli";
 import MasterKaryawan from "./pages/master-data/MasterKaryawan";
 import MasterProject from "./pages/master-data/MasterProject";
+import MasterBarangJasa from "./pages/master-data/MasterBarangJasa";
+import MasterGudang from "./pages/master-data/MasterGudang";
+import MasterMataUang from "./pages/master-data/MasterMataUang";
+import MasterPajak from "./pages/master-data/MasterPajak";
 import Setting from "./pages/Setting";
 import TrialBalance from "./pages/laporan/TrialBalance";
 import BukuBesar from "./pages/laporan/BukuBesar";
@@ -97,6 +101,13 @@ export default function App() {
                 </Layout>
               </ProtectedRoute>
             } />
+            <Route path="/master-data/barang-jasa" element={
+              <ProtectedRoute>
+                <Layout>
+                  <MasterBarangJasa />
+                </Layout>
+              </ProtectedRoute>
+            } />
             <Route path="/setting" element={
               <ProtectedRoute>
                 <Layout>
@@ -157,6 +168,27 @@ export default function App() {
               <ProtectedRoute>
                 <Layout>
                   <BukuBesar />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/master-data/gudang" element={
+              <ProtectedRoute>
+                <Layout>
+                  <MasterGudang />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/master-data/mata-uang" element={
+              <ProtectedRoute>
+                <Layout>
+                  <MasterMataUang />
+                </Layout>
+              </ProtectedRoute>
+            } />
+            <Route path="/master-data/pajak" element={
+              <ProtectedRoute>
+                <Layout>
+                  <MasterPajak />
                 </Layout>
               </ProtectedRoute>
             } />

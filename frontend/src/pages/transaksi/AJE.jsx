@@ -9,8 +9,10 @@ import api from "../../utils/api";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { parse, format } from "date-fns";
+import { useTheme } from "../../context/ThemeContext"; // tambahkan ini di bagian import
 
 export default function AJE() {
+  const { theme } = useTheme(); // gunakan theme
   const [rows, setRows] = useState([]);
   const [coaList, setCoaList] = useState([]);
   const [akunFilter, setAkunFilter] = useState([]); // filter multi-select nama akun
@@ -368,8 +370,21 @@ export default function AJE() {
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-bold mb-4">Jurnal Penyesuaian (AJE)</h2>
+    <div
+      style={{
+        background: theme.cardColor,
+        color: theme.fontColor,
+        fontFamily: theme.fontFamily,
+        borderRadius: 12,
+        padding: 24,
+      }}
+    >
+      <h2
+        className="text-xl font-bold mb-4"
+        style={{ color: theme.fontColor, fontFamily: theme.fontFamily }}
+      >
+        Jurnal Penyesuaian (AJE)
+      </h2>
       <ActiveFiltersBar
         tanggalFilter={tanggalFilter}
         noBuktiFilter={noBuktiFilter}
@@ -392,8 +407,15 @@ export default function AJE() {
         }}
       />
       <div style={{ overflowX: "auto" }}>
-        <table className="min-w-full border text-sm">
-          <thead className="bg-gray-100">
+        <table
+          className="min-w-full border text-sm"
+          style={{
+            fontFamily: theme.tableFontFamily,
+            background: theme.cardColor,
+            color: theme.tableFontColor,
+          }}
+        >
+          <thead style={{ background: theme.tableHeaderColor, color: theme.tableFontColor }}>
             <tr>
              <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 150 }}>
               Tanggal
@@ -401,7 +423,7 @@ export default function AJE() {
                 <TanggalDropdownCustomButton rows={rows} value={tanggalFilter} onChange={setTanggalFilter} />
               </span>
              </th>
-              <th className="border px-2 py-1" style={{ position: 'absolute', right: 4, top: 4 }}>
+              <th className="border px-2 py-1" style={{ position: 'relative', minWidth: 150 }}>
                 No. Bukti
                 <span style={{ position: 'absolute', right: 4, top: 4 }}>
                   <SimpleDropdownFilterButton
@@ -470,36 +492,61 @@ export default function AJE() {
           </thead>
           <tbody>
             {filteredRows.map((row, idx) => (
-              <tr key={row.id} className={row.posted ? "bg-gray-100" : ""}>
-              <td className="border px-2 py-1" style={{ minWidth: 150 }}>
-                {row.posted ? (
-                  formatTanggal(row.tanggal)
-                ) : (
-                  <DatePicker
-                    selected={
-                      row.tanggal
-                        ? parse(row.tanggal, "yyyy-MM-dd", new Date())
-                        : null
-                    }
-                    onChange={date => {
-                      const iso = date ? format(date, "yyyy-MM-dd") : "";
-                      handleChange(idx, { target: { name: "tanggal", value: iso } });
-                    }}
-                    dateFormat="dd/MM/yyyy"
-                    customInput={
-                      <input
-                        className="border rounded px-2 py-1"
-                        readOnly={row.posted}
-                        disabled={row.posted}
-                        placeholder="dd/mm/yyyy"
-                      />
-                    }
-                    disabled={row.posted}
-                  />
-                )}
-              </td>
+              <tr
+                key={row.id}
+                style={{
+                  background: row.posted ? theme.tableHeaderColor : theme.tableBodyColor,
+                  color: theme.tableFontColor,
+                  fontFamily: theme.tableFontFamily,
+                }}
+              >
+                <td className="border px-2 py-1" style={{ minWidth: 150 }}>
+                  {row.posted ? (
+                    formatTanggal(row.tanggal)
+                  ) : (
+                    <DatePicker
+                      selected={
+                        row.tanggal
+                          ? parse(row.tanggal, "yyyy-MM-dd", new Date())
+                          : null
+                      }
+                      onChange={date => {
+                        const iso = date ? format(date, "yyyy-MM-dd") : "";
+                        handleChange(idx, { target: { name: "tanggal", value: iso } });
+                      }}
+                      dateFormat="dd/MM/yyyy"
+                      customInput={
+                        <input
+                          className="border rounded px-2 py-1"
+                          readOnly={row.posted}
+                          disabled={row.posted}
+                          placeholder="dd/mm/yyyy"
+                          style={{
+                            background: theme.fieldColor,
+                            color: theme.fontColor,
+                            fontFamily: theme.fontFamily,
+                          }}
+                        />
+                      }
+                      disabled={row.posted}
+                    />
+                  )}
+                </td>
                 <td className="border px-2 py-1">
-                  <input type="text" name="noBukti" value={row.noBukti} onChange={e => handleChange(idx, e)} className="border rounded px-2 py-1" readOnly={row.posted} disabled={row.posted} />
+                  <input
+                    type="text"
+                    name="noBukti"
+                    value={row.noBukti}
+                    onChange={e => handleChange(idx, e)}
+                    className="border rounded px-2 py-1"
+                    readOnly={row.posted}
+                    disabled={row.posted}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
+                  />
                 </td>
                 <td className="border px-2 py-1">
                   <select
@@ -508,15 +555,35 @@ export default function AJE() {
                     onChange={e => handleChange(idx, e)}
                     className="border rounded px-2 py-1 w-full"
                     disabled={row.posted}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   >
                     <option value="">Pilih Akun</option>
                     {coaList.map(coa => (
-                      <option key={coa.id} value={coa.nama} data-kode={coa.kode}>({coa.kode}) {coa.nama} </option>
+                      <option key={coa.id} value={coa.nama} data-kode={coa.kode}>
+                        ({coa.kode}) {coa.nama}
+                      </option>
                     ))}
                   </select>
                 </td>
                 <td className="border px-2 py-1">
-                  <input type="text" name="deskripsi" value={row.deskripsi} onChange={e => handleChange(idx, e)} className="border rounded px-2 py-1" readOnly={row.posted} disabled={row.posted} />
+                  <input
+                    type="text"
+                    name="deskripsi"
+                    value={row.deskripsi}
+                    onChange={e => handleChange(idx, e)}
+                    className="border rounded px-2 py-1"
+                    readOnly={row.posted}
+                    disabled={row.posted}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
+                  />
                 </td>
                 <td className="border px-2 py-1">
                   <input
@@ -524,9 +591,7 @@ export default function AJE() {
                     name="debit"
                     value={row._editingDebit === undefined ? (row.debit === "" ? "" : Number(row.debit).toLocaleString("id-ID", { minimumFractionDigits: 2, maximumFractionDigits: 2 })) : row._editingDebit}
                     onChange={e => {
-                      // Izinkan angka, koma, titik
                       let raw = e.target.value.replace(/[^0-9.,]/g, "");
-                      // Ganti koma ke titik agar konsisten
                       raw = raw.replace(/,/g, ".");
                       setRows(rows.map((r, i) =>
                         i === idx ? { ...r, _editingDebit: e.target.value, debit: raw, saved: false } : r
@@ -548,6 +613,11 @@ export default function AJE() {
                     className="border rounded px-2 py-1 text-right"
                     readOnly={row.posted}
                     disabled={row.posted || (row.kredit && row.kredit !== "" && parseFloat(row.kredit) !== 0)}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   />
                 </td>
                 <td className="border px-2 py-1">
@@ -576,55 +646,147 @@ export default function AJE() {
                     className="border rounded px-2 py-1 text-right"
                     readOnly={row.posted}
                     disabled={row.posted || (row.debit && row.debit !== "" && parseFloat(row.debit) !== 0)}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
                   />
                 </td>
-              <td className="border px-2 py-1">
-                <select
-                  name="projectNo"
-                  value={row.projectNo || ""}
-                  onChange={e => {
-                    const value = e.target.value;
-                    const selected = projectList.find(p => p.kode_project === value);
-                    handleChange(idx, { target: { name: "projectNo", value } });
-                    setRows(rows.map((r, i) =>
-                      i === idx
-                        ? { ...r, projectNo: value, projectName: selected ? selected.nama_project : "" }
-                        : r
-                    ));
-                  }}
-                  className="border rounded px-2 py-1 w-full"
-                  disabled={row.posted}
-                >
-                  <option value="">Pilih Project</option>
-                  {renderProjectOptions()}
-                </select>
-              </td>
-              <td className="border px-2 py-1">
-                <input
-                  type="text"
-                  name="projectName"
-                  value={row.projectName || ""}
-                  readOnly
-                  className="border rounded px-2 py-1 w-full bg-gray-100"
-                  placeholder="Nama project otomatis"
-                />
-              </td>
+                <td className="border px-2 py-1">
+                  <select
+                    name="projectNo"
+                    value={row.projectNo || ""}
+                    onChange={e => {
+                      const value = e.target.value;
+                      const selected = projectList.find(p => p.kode_project === value);
+                      handleChange(idx, { target: { name: "projectNo", value } });
+                      setRows(rows.map((r, i) =>
+                        i === idx
+                          ? { ...r, projectNo: value, projectName: selected ? selected.nama_project : "" }
+                          : r
+                      ));
+                    }}
+                    className="border rounded px-2 py-1 w-full"
+                    disabled={row.posted}
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
+                  >
+                    <option value="">Pilih Project</option>
+                    {renderProjectOptions()}
+                  </select>
+                </td>
+                <td className="border px-2 py-1">
+                  <input
+                    type="text"
+                    name="projectName"
+                    value={row.projectName || ""}
+                    readOnly
+                    className="border rounded px-2 py-1 w-full"
+                    placeholder="Nama project otomatis"
+                    style={{
+                      background: theme.fieldColor,
+                      color: theme.fontColor,
+                      fontFamily: theme.fontFamily,
+                    }}
+                  />
+                </td>
                 <td className="border px-2 py-1 text-center">
                   {!row.saved ? (
                     <>
-                      <button type="button" onClick={() => handleSave(idx)} className="text-green-600 font-bold" title="Simpan">💾</button>
-                      <button type="button" onClick={() => handleDelete(idx)} className="ml-2 text-red-500 font-bold" title="Hapus">🗑️</button>
-                      <button type="button" onClick={() => handleClone(idx)} className="ml-2 text-indigo-500 font-bold" title="Clone">📋</button>
+                      <button
+                        type="button"
+                        onClick={() => handleSave(idx)}
+                        className="font-bold"
+                        title="Simpan"
+                        style={{
+                          color: theme.buttonSimpan,
+                          fontFamily: theme.fontFamily,
+                          background: "transparent",
+                          border: "none",
+                        }}
+                      >💾</button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(idx)}
+                        className="ml-2 font-bold"
+                        title="Hapus"
+                        style={{
+                          color: theme.buttonHapus,
+                          fontFamily: theme.fontFamily,
+                          background: "transparent",
+                          border: "none",
+                        }}
+                      >🗑️</button>
+                      <button
+                        type="button"
+                        onClick={() => handleClone(idx)}
+                        className="ml-2 font-bold"
+                        title="Clone"
+                        style={{
+                          color: theme.buttonEdit,
+                          fontFamily: theme.fontFamily,
+                          background: "transparent",
+                          border: "none",
+                        }}
+                      >📋</button>
                     </>
                   ) : (
                     <>
                       {!row.posted ? (
-                        <button type="button" onClick={() => handlePosting(idx)} className="text-blue-600 font-bold" title="Posting">📤</button>
+                        <button
+                          type="button"
+                          onClick={() => handlePosting(idx)}
+                          className="font-bold"
+                          title="Posting"
+                          style={{
+                            color: theme.buttonEdit,
+                            fontFamily: theme.fontFamily,
+                            background: "transparent",
+                            border: "none",
+                          }}
+                        >📤</button>
                       ) : (
-                        <button type="button" onClick={() => handleUnposting(idx)} className="text-gray-500 font-bold" title="Unposting">↩️</button>
+                        <button
+                          type="button"
+                          onClick={() => handleUnposting(idx)}
+                          className="font-bold"
+                          title="Unposting"
+                          style={{
+                            color: theme.buttonRefresh,
+                            fontFamily: theme.fontFamily,
+                            background: "transparent",
+                            border: "none",
+                          }}
+                        >↩️</button>
                       )}
-                      <button type="button" onClick={() => handleDelete(idx)} className="ml-2 text-red-500 font-bold" title="Hapus">🗑️</button>
-                      <button type="button" onClick={() => handleClone(idx)} className="ml-2 text-indigo-500 font-bold" title="Clone">📋</button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(idx)}
+                        className="ml-2 font-bold"
+                        title="Hapus"
+                        style={{
+                          color: theme.buttonHapus,
+                          fontFamily: theme.fontFamily,
+                          background: "transparent",
+                          border: "none",
+                        }}
+                      >🗑️</button>
+                      <button
+                        type="button"
+                        onClick={() => handleClone(idx)}
+                        className="ml-2 font-bold"
+                        title="Clone"
+                        style={{
+                          color: theme.buttonEdit,
+                          fontFamily: theme.fontFamily,
+                          background: "transparent",
+                          border: "none",
+                        }}
+                      >📋</button>
                     </>
                   )}
                 </td>
@@ -633,7 +795,18 @@ export default function AJE() {
           </tbody>
         </table>
       </div>
-      <button type="button" onClick={() => addRow()} className="mt-3 px-4 py-2 bg-indigo-500 text-white rounded">+ Tambah Baris</button>
+      <button
+        type="button"
+        onClick={() => addRow()}
+        className="mt-3 px-4 py-2 rounded"
+        style={{
+          background: theme.buttonSimpan,
+          color: "#fff",
+          fontFamily: theme.fontFamily,
+        }}
+      >
+        + Tambah Baris
+      </button>
     </div>
   );
 }
