@@ -38,7 +38,9 @@ export default function SideNavbar({ onClose }) {
         { name: "Buku Kas", to: "/input-transaksi" },
         { name: "Pembelian", to: "/transaksi/pembelian" },
         { name: "Penjualan", to: "/transaksi/penjualan" },
-        { name: "Aset" },
+        { name: "Aset Tetap" },
+        { name: "Aset Tetap Berwujud" },
+        { name: "Aset Tetap Tak Berwujud" },
       ],
     },
     {
