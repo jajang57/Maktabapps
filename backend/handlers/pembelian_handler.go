@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"project-akuntansi-backend/models"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -32,14 +34,54 @@ type CurrencyAccountsap struct {
 
 // CreatePembelian - Create AP Invoice (header + detail + GL)
 func (h *PembelianHandler) CreatePembelian(c *gin.Context) {
-	var req models.Pembelian
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[pembelian] JSON bind error: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	var reqReq models.PembelianRequest
+	// Use manual JSON unmarshal to avoid automatic validator 'required' enforcement
+	// which previously caused TanggalStr to be required.
+	bodyBytes, err := c.GetRawData()
+	if err != nil {
+		log.Printf("[pembelian] failed to read request body: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
+		return
+	}
+	if err := json.Unmarshal(bodyBytes, &reqReq); err != nil {
+		log.Printf("[pembelian] JSON unmarshal error: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
 		return
 	}
 
-	log.Printf("[pembelian] CreatePembelian request: %+v", req)
+	// Convert request DTO to model (marshal Tax []string to JSON)
+	var req models.Pembelian
+	req.NomorAPInvoice = reqReq.NomorAPInvoice
+	req.TanggalStr = reqReq.TanggalStr
+	req.DeliveryDateStr = reqReq.DeliveryDateStr
+	req.SupplierID = reqReq.SupplierID
+	req.GudangID = reqReq.GudangID
+	req.DepartementID = reqReq.DepartementID
+	req.NomorRefSupplier = reqReq.NomorRefSupplier
+	req.Notes = reqReq.Notes
+	req.Freight = reqReq.Freight
+	req.Stamp = reqReq.Stamp
+	req.Status = reqReq.Status
+	// convert details
+	for _, d := range reqReq.Details {
+		// marshal tax array to JSON
+		taxBytes, _ := json.Marshal(d.Tax)
+		pd := models.PembelianDetail{
+			KodeItem:       d.KodeItem,
+			NamaItem:       d.NamaItem,
+			Qty:            d.Qty,
+			Unit:           d.Unit,
+			Price:          d.Price,
+			DiscPercent:    d.DiscPercent,
+			DiscAmountItem: d.DiscAmountItem,
+			DiscAmount:     d.DiscAmount,
+			Tax:            datatypes.JSON(taxBytes),
+			GudangId:       d.GudangId,
+		}
+		req.Details = append(req.Details, pd)
+	}
+
+	log.Printf("[pembelian] CreatePembelian request: %+v", reqReq)
 
 	// Parse tanggal dari string jika ada
 	if req.TanggalStr != "" {
@@ -218,11 +260,49 @@ func (h *PembelianHandler) UpdatePembelian(c *gin.Context) {
 	id := c.Param("id")
 	log.Printf("[pembelian] UpdatePembelian request for ID=%s", id)
 
-	var req models.Pembelian
-	if err := c.ShouldBindJSON(&req); err != nil {
-		log.Printf("[pembelian] JSON bind error: %v", err)
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+	// For update, bind to request DTO and convert
+	var reqReqUpd models.PembelianRequest
+	// Read raw body and unmarshal manually for update as well
+	bodyBytesUpd, err := c.GetRawData()
+	if err != nil {
+		log.Printf("[pembelian] failed to read request body for update: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body"})
 		return
+	}
+	if err := json.Unmarshal(bodyBytesUpd, &reqReqUpd); err != nil {
+		log.Printf("[pembelian] JSON unmarshal error for update: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid JSON format"})
+		return
+	}
+
+	// convert to model
+	var req models.Pembelian
+	req.NomorAPInvoice = reqReqUpd.NomorAPInvoice
+	req.TanggalStr = reqReqUpd.TanggalStr
+	req.DeliveryDateStr = reqReqUpd.DeliveryDateStr
+	req.SupplierID = reqReqUpd.SupplierID
+	req.GudangID = reqReqUpd.GudangID
+	req.DepartementID = reqReqUpd.DepartementID
+	req.NomorRefSupplier = reqReqUpd.NomorRefSupplier
+	req.Notes = reqReqUpd.Notes
+	req.Freight = reqReqUpd.Freight
+	req.Stamp = reqReqUpd.Stamp
+	req.Status = reqReqUpd.Status
+	for _, d := range reqReqUpd.Details {
+		taxBytes, _ := json.Marshal(d.Tax)
+		pd := models.PembelianDetail{
+			KodeItem:       d.KodeItem,
+			NamaItem:       d.NamaItem,
+			Qty:            d.Qty,
+			Unit:           d.Unit,
+			Price:          d.Price,
+			DiscPercent:    d.DiscPercent,
+			DiscAmountItem: d.DiscAmountItem,
+			DiscAmount:     d.DiscAmount,
+			Tax:            datatypes.JSON(taxBytes),
+			GudangId:       d.GudangId,
+		}
+		req.Details = append(req.Details, pd)
 	}
 
 	// Get existing pembelian for reference
@@ -671,11 +751,17 @@ func GenerateAPInvoiceGLLines(db *gorm.DB, pembelian models.Pembelian) ([]models
 	var totalPPH float64
 
 	for _, detail := range pembelian.Details {
+		// detail.Tax is stored as datatypes.JSON; unmarshal to []string
 		if len(detail.Tax) == 0 {
 			continue
 		}
+		var taxCodes []string
+		if err := json.Unmarshal(detail.Tax, &taxCodes); err != nil {
+			log.Printf("[pembelian] Warning: failed to unmarshal tax JSON: %v", err)
+			continue
+		}
 
-		for _, taxCode := range detail.Tax {
+		for _, taxCode := range taxCodes {
 			var pajak models.MasterPajak
 			if err := db.Where("code = ?", taxCode).First(&pajak).Error; err != nil {
 				log.Printf("[pembelian] Warning: pajak %s tidak ditemukan", taxCode)
@@ -760,7 +846,11 @@ func GenerateAPInvoiceGLLines(db *gorm.DB, pembelian models.Pembelian) ([]models
 		// Get PPH account from first PPH tax found
 		var pphAccount string
 		for _, detail := range pembelian.Details {
-			for _, taxCode := range detail.Tax {
+			var taxCodes []string
+			if err := json.Unmarshal(detail.Tax, &taxCodes); err != nil {
+				continue
+			}
+			for _, taxCode := range taxCodes {
 				var pajak models.MasterPajak
 				if err := db.Where("code = ?", taxCode).First(&pajak).Error; err == nil {
 					if strings.Contains(strings.ToLower(pajak.TaxType), "pph") {

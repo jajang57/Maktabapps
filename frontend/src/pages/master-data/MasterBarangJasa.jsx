@@ -340,6 +340,7 @@ export default function MasterBarangJasa() {
       hpp: row.akunHPP || "",
       returPembelian: row.akunReturPembelian || "",
       diskonKhusus: row.akunDiskonKhusus || "",
+      pembelian: row.akunPembelian || "",
     });
     setFormattedHargaBeli(row.hargaBeli ? formatNumber(row.hargaBeli) : "");
     setFormattedHargaJual(row.hargaJual ? formatNumber(row.hargaJual) : "");

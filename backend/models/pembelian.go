@@ -3,6 +3,7 @@ package models
 import (
 	"time"
 
+	"gorm.io/datatypes"
 	"gorm.io/gorm"
 )
 
@@ -76,10 +77,11 @@ type PembelianDetail struct {
 	DiscAmount     float64 `json:"discAmount" gorm:"column:disc_amount;type:decimal(15,2);default:0"`
 
 	// Tax Info (Multi-tax support)
-	Tax        []string `json:"tax" gorm:"type:json"` // Array of tax codes
-	TaxAmount1 float64  `json:"taxamount1" gorm:"column:tax_amount_1;type:decimal(15,2);default:0"`
-	TaxAmount2 float64  `json:"taxamount2" gorm:"column:tax_amount_2;type:decimal(15,2);default:0"`
-	TaxAmount3 float64  `json:"taxamount3" gorm:"column:tax_amount_3;type:decimal(15,2);default:0"`
+	// Stored as JSON in the database to support multiple tax codes per line
+	Tax        datatypes.JSON `json:"tax" gorm:"type:jsonb"`
+	TaxAmount1 float64        `json:"taxamount1" gorm:"column:tax_amount_1;type:decimal(15,2);default:0"`
+	TaxAmount2 float64        `json:"taxamount2" gorm:"column:tax_amount_2;type:decimal(15,2);default:0"`
+	TaxAmount3 float64        `json:"taxamount3" gorm:"column:tax_amount_3;type:decimal(15,2);default:0"`
 
 	// Financial Calculations
 	Dpp    float64 `json:"dpp" gorm:"type:decimal(15,2);default:0"`    // Dasar Pengenaan Pajak
@@ -217,7 +219,7 @@ func (p *Pembelian) GetTotalDiscount() float64 {
 // Validation struct untuk request validation
 type PembelianRequest struct {
 	NomorAPInvoice   string                   `json:"nomorapinvoice" binding:"required"`
-	TanggalStr       string                   `json:"tanggalStr" binding:"required"`
+	TanggalStr       string                   `json:"tanggalStr"`
 	DeliveryDateStr  string                   `json:"deliveryDateStr"`
 	SupplierID       uint                     `json:"supplierId" binding:"required,min=1"`
 	GudangID         uint                     `json:"gudangId"`
