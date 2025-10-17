@@ -69,6 +69,8 @@ func main() {
 		&models.MasterPemasok{},
 		&models.MasterMataUang{},
 		&models.MasterPajak{},
+		&models.Pembelian{}, // ✅ Tambahkan ini
+		&models.PembelianDetail{},
 	)
 
 	if err != nil {
@@ -114,6 +116,17 @@ func main() {
 	api.Use(handlers.AuthMiddleware())
 	{
 		api.POST("/logout", handlers.Logout(db))
+
+		pembelianHandler := handlers.NewPembelianHandler(db)
+		api.GET("/pembelian", pembelianHandler.GetAllPembelian)                               // Get all AP invoices
+		api.GET("/pembelian/:id", pembelianHandler.GetPembelianByID)                          // Get AP invoice by ID
+		api.POST("/pembelian", pembelianHandler.CreatePembelian)                              // Create new AP invoice
+		api.PUT("/pembelian/:id", pembelianHandler.UpdatePembelian)                           // Update AP invoice
+		api.DELETE("/pembelian/:id", pembelianHandler.DeletePembelian)                        // Delete AP invoice
+		api.GET("/pembelian/nomor/:nomor", pembelianHandler.GetPembelianByNomor)              // Get AP invoice by nomor
+		api.PATCH("/pembelian/:id/status", pembelianHandler.UpdatePembelianStatus)            // Update status only
+		api.GET("/pembelian/report", pembelianHandler.GetPembelianReport)                     // Generate report
+		api.GET("/pembelian/next-ap-invoice-number", pembelianHandler.GetNextAPInvoiceNumber) // Generate next AP invoice number
 
 		api.GET("/master-coa", handlers.GetMasterCOA(db))
 		api.POST("/master-coa", handlers.PostMasterCOA(db))
@@ -217,6 +230,7 @@ func main() {
 		api.DELETE("/master-pembeli/:id", handlers.DeleteMasterPembeli(db))
 
 		api.GET("/pemasok", handlers.GetMasterPemasok(db))
+		api.GET("/pemasok-list", handlers.GetPemasokList(db))
 		api.POST("/pemasok", handlers.CreateMasterPemasok(db))
 		api.PUT("/pemasok/:id", handlers.UpdateMasterPemasok(db))
 		api.DELETE("/pemasok/:id", handlers.DeleteMasterPemasok(db))

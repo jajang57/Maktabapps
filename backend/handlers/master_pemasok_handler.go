@@ -17,6 +17,14 @@ func GetMasterPemasok(db *gorm.DB) gin.HandlerFunc {
 	}
 }
 
+func GetPemasokList(db *gorm.DB) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		var pemasoks []models.MasterPemasok
+		db.Order("nama ASC").Find(&pemasoks)
+		c.JSON(http.StatusOK, pemasoks)
+	}
+}
+
 func CreateMasterPemasok(db *gorm.DB) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var input models.MasterPemasok

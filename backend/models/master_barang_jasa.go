@@ -33,6 +33,7 @@ type MasterBarangJasa struct {
 	AkunHPP             string `json:"akunHPP"`
 	AkunReturPembelian  string `json:"akunReturPembelian"`
 	AkunDiskonKhusus    string `json:"akunDiskonKhusus"`
+	AkunPembelian       string `json:"akunPembelian"`
 }
 
 func (MasterBarangJasa) TableName() string {
